@@ -62,7 +62,8 @@ function CPDialog:init(info)
         widgets.HotkeyLabel{
             frame={b=0},
             key='STRING_A000',
-            label='Backspace',
+            key_sep='',
+            label='Click here to Backspace',
             auto_width=true,
             on_activate=function() self.subviews.edit:onInput{_STRING=0} end,
         },

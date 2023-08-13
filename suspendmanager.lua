@@ -58,14 +58,15 @@ REASON_DESCRIPTION = {
 --- Suspension reasons from an external source
 --- SuspendManager does not actively suspend such jobs, but
 --- will not unsuspend them
-EXTERNAL_REASONS = {
-    [REASON.UNDER_WATER]=true,
-    [REASON.BUILDINGPLAN]=true,
+EXTERNAL_REASONS = utils.invert{
+    REASON.UNDER_WATER,
+    REASON.BUILDINGPLAN,
 }
 
 ---@class SuspendManager
 ---@field preventBlocking boolean
 ---@field suspensions table<integer, reason>
+---@field leadsToDeadend table<integer, boolean>
 ---@field lastAutoRunTick integer
 SuspendManager = defclass(SuspendManager)
 SuspendManager.ATTRS {
@@ -75,6 +76,9 @@ SuspendManager.ATTRS {
 
     --- Current job suspensions with their reasons
     suspensions = {},
+
+    --- Current job that are part of a dead-end, not worth considering as an exit
+    leadsToDeadend = {},
 
     --- Last tick where it was run automatically
     lastAutoRunTick = -1,
@@ -90,6 +94,17 @@ end
 
 function preventBlockingEnabled()
     return Instance.preventBlocking
+end
+
+--- Returns true if the job is maintained suspended by suspendmanager
+---@param job job
+function isKeptSuspended(job)
+    if not isEnabled() or not preventBlockingEnabled() then
+        return false
+    end
+
+    local reason = Instance.suspensions[job.id]
+    return reason and not EXTERNAL_REASONS[reason]
 end
 
 local function persist_state()
@@ -141,25 +156,25 @@ function foreach_construction_job(fn)
     end
 end
 
-local CONSTRUCTION_IMPASSABLE = {
-    [df.construction_type.Wall]=true,
-    [df.construction_type.Fortification]=true,
+local CONSTRUCTION_IMPASSABLE = utils.invert{
+    df.construction_type.Wall,
+    df.construction_type.Fortification,
 }
 
-local BUILDING_IMPASSABLE = {
-    [df.building_type.Floodgate]=true,
-    [df.building_type.Statue]=true,
-    [df.building_type.WindowGlass]=true,
-    [df.building_type.WindowGem]=true,
-    [df.building_type.GrateWall]=true,
-    [df.building_type.BarsVertical]=true,
+local BUILDING_IMPASSABLE = utils.invert{
+    df.building_type.Floodgate,
+    df.building_type.Statue,
+    df.building_type.WindowGlass,
+    df.building_type.WindowGem,
+    df.building_type.GrateWall,
+    df.building_type.BarsVertical,
 }
 
 --- Designation job type that are erased if a building is built on top of it
-local ERASABLE_DESIGNATION = {
-    [df.job_type.CarveTrack]=true,
-    [df.job_type.SmoothFloor]=true,
-    [df.job_type.DetailFloor]=true,
+local ERASABLE_DESIGNATION = utils.invert{
+    df.job_type.CarveTrack,
+    df.job_type.SmoothFloor,
+    df.job_type.DetailFloor,
 }
 
 --- Job types that impact suspendmanager
@@ -305,11 +320,6 @@ function SuspendManager:suspendDeadend(start_job)
     if not building then return end
     local pos = {x=building.centerx,y=building.centery,z=building.z}
 
-    -- visited building ids of this potential dead end
-    local visited = {
-        [building.id] = true
-    }
-
     --- Support dead ends of a maximum length of 1000
     for _=0,1000 do
         -- building plan on the way to the exit
@@ -327,7 +337,7 @@ function SuspendManager:suspendDeadend(start_job)
                 return
             end
 
-            if visited[impassablePlan.id] then
+            if self.leadsToDeadend[impassablePlan.id] then
                 -- already visited, not an exit
                 goto continue
             end
@@ -345,14 +355,17 @@ function SuspendManager:suspendDeadend(start_job)
 
         if not exit then return end
 
-        -- exit is the single exit point of this corridor, suspend its construction job
+        -- exit is the single exit point of this corridor, suspend its construction job,
+        -- mark the current tile of the corridor as leading to a dead-end
         -- and continue the exploration from its position
         for _,job in ipairs(exit.jobs) do
             if job.job_type == df.job_type.ConstructBuilding then
                 self.suspensions[job.id] = REASON.DEADEND
             end
         end
-        visited[exit.id] = true
+        self.leadsToDeadend[building.id] = true
+
+        building = exit
         pos = {x=exit.centerx,y=exit.centery,z=exit.z}
     end
 end
@@ -406,6 +419,7 @@ end
 --- Recompute the list of suspended jobs
 function SuspendManager:refresh()
     self.suspensions = {}
+    self.leadsToDeadend = {}
 
     for _,job in utils.listpairs(df.global.world.jobs.list) do
         -- External reasons to suspend a job
@@ -618,15 +632,26 @@ function ToggleOverlay:init()
     }
 end
 
-function ToggleOverlay:render(dc)
+function ToggleOverlay:shouldRender()
     local job = dfhack.gui.getSelectedJob()
-    if not job or job.job_type ~= df.job_type.ConstructBuilding or isBuildingPlanJob(job) then
+    return job and job.job_type == df.job_type.ConstructBuilding and not isBuildingPlanJob(job)
+end
+
+function ToggleOverlay:render(dc)
+    if not self:shouldRender() then
         return
     end
     -- Update the option: the "initial_option" value is not up to date since the widget
     -- is not reinitialized for overlays
     self.subviews.enable_toggle:setOption(isEnabled(), false)
     ToggleOverlay.super.render(self, dc)
+end
+
+function ToggleOverlay:onInput(keys)
+    if not self:shouldRender() then
+        return
+    end
+    ToggleOverlay.super.onInput(self, keys)
 end
 
 OVERLAY_WIDGETS = {

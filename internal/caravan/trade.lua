@@ -367,7 +367,7 @@ function Trade:cache_choices(list_idx, trade_bins)
         local is_ethical = is_ethical_product(item, self.animal_ethics, self.wood_ethics)
         local data = {
             desc=desc,
-            value=common.get_perceived_value(item, trade.mer, list_idx == 1),
+            value=common.get_perceived_value(item, trade.mer),
             list_idx=list_idx,
             item=item,
             item_idx=item_idx,

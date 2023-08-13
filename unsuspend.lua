@@ -143,9 +143,9 @@ local function get_texposes()
         return valid and start + offset or nil
     end
 
-    return tp(3), tp(1), tp(0)
+    return tp(3), tp(2), tp(1), tp(0)
 end
-local PLANNED_TEXPOS, SUSPENDED_TEXPOS, REPEAT_SUSPENDED_TEXPOS = get_texposes()
+local PLANNED_TEXPOS, KEPT_SUSPENDED_TEXTPOS, SUSPENDED_TEXPOS, REPEAT_SUSPENDED_TEXPOS = get_texposes()
 
 function SuspendOverlay:render_marker(dc, bld, screen_pos)
     if not bld or #bld.jobs ~= 1 then return end
@@ -159,6 +159,8 @@ function SuspendOverlay:render_marker(dc, bld, screen_pos)
     local color, ch, texpos = COLOR_YELLOW, 'x', SUSPENDED_TEXPOS
     if buildingplan and buildingplan.isPlannedBuilding(bld) then
         color, ch, texpos = COLOR_GREEN, 'P', PLANNED_TEXPOS
+    elseif suspendmanager and suspendmanager.isKeptSuspended(job) then
+        color, ch, texpos = COLOR_WHITE, 'x', KEPT_SUSPENDED_TEXTPOS
     elseif data.suspend_count > 1 then
         color, ch, texpos = COLOR_RED, 'X', REPEAT_SUSPENDED_TEXPOS
     end

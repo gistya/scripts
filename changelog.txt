@@ -9,15 +9,39 @@ top of this file (even if no changes are listed under it), or you will get a
 changelogs when making a new release, docs/changelog.txt in the dfhack repo must
 have the new release listed in the right place, even if no changes were made in
 that repo.
-]]]
 
-# Future
+Template for new versions:
 
-## New Scripts
+## New Tools
+
+## New Features
 
 ## Fixes
 
 ## Misc Improvements
+
+## Removed
+
+]]]
+
+# Future
+
+## New Tools
+- `devel/scan-vtables`: Scan and dump likely vtable addresses (for memory research)
+
+## New Features
+- `exportlegends`: new overlay that integrates with the vanilla "Export XML" button. Now you can generate both the vanilla export and the extended data export with a single click!
+
+## Fixes
+- `suspendmanager`: Fix the overlay enabling/disabling `suspendmanager` unexpectedly
+- `caravan`: Correct price adjustment values in trade agreement details screen
+- `caravan`: Apply both import and export trade agreement price adjustments to items being both bought or sold to align with how vanilla DF calculates prices
+- `suspendmanager`: Improve the detection on "T" and "+" shaped high walls
+- `starvingdead`: ensure sieges end properly when undead siegers starve
+
+## Misc Improvements
+- `devel/lsmem`: added support for filtering by memory addresses and filenames
+- `suspendmanager`: display a different color for jobs suspended by suspendmanager
 
 ## Removed
 

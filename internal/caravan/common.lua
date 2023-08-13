@@ -107,12 +107,12 @@ function get_item_description(item)
 end
 
 -- takes into account trade agreements
-function get_perceived_value(item, caravan_state, caravan_buying)
-    local value = dfhack.items.getValue(item, caravan_state, caravan_buying)
+function get_perceived_value(item, caravan_state)
+    local value = dfhack.items.getValue(item, caravan_state)
     for _,contained_item in ipairs(dfhack.items.getContainedItems(item)) do
-        value = value + dfhack.items.getValue(contained_item, caravan_state, caravan_buying)
+        value = value + dfhack.items.getValue(contained_item, caravan_state)
         for _,contained_contained_item in ipairs(dfhack.items.getContainedItems(contained_item)) do
-            value = value + dfhack.items.getValue(contained_contained_item, caravan_state, caravan_buying)
+            value = value + dfhack.items.getValue(contained_contained_item, caravan_state)
         end
     end
     return value
@@ -437,7 +437,7 @@ local function show_export_agreements(export_agreements)
     for _, agreement in ipairs(export_agreements) do
         for idx, price in ipairs(agreement.price) do
             local desc = make_item_description(agreement.items.item_type[idx], agreement.items.item_subtype[idx])
-            local percent = (price * 100) // 256
+            local percent = (price * 100) // 128
             table.insert(strs, ('%20s %d%%'):format(desc..':', percent))
         end
     end

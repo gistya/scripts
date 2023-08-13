@@ -39,6 +39,8 @@ buildings:
 - A clock icon (green ``P`` in ASCII mode) indicates that the building is still
   in planning mode and is waiting on materials. The `buildingplan` plugin will
   unsuspend it for you when those materials become available.
+- A white ``x`` means that the building is maintained suspended by
+  `suspendmanager`, selecting it will provide a reason for the suspension
 - A yellow ``x`` means that the building is suspended. If you don't have
   `suspendmanager` managing suspensions for you, you can unsuspend it
   manually or with the `unsuspend` command.

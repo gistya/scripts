@@ -680,6 +680,7 @@ end
 
 local function init_dig_ctx(ctx, pos, direction)
     local flags, occupancy = dfhack.maps.getTileFlags(pos)
+    if not flags then return end
     local tileattrs = df.tiletype.attrs[dfhack.maps.getTileType(pos)]
     local engraving = nil
     if is_smooth(tileattrs) then
@@ -787,6 +788,7 @@ local function do_run_impl(zlevel, grid, ctx)
                              get_track_direction(extent_x, extent_y,
                                                  extent.width, extent.height))
                     local digctx = init_dig_ctx(ctx, extent_pos, direction)
+                    if not digctx then goto inner_continue end
                     if db_entry.action == do_smooth or db_entry.action == do_engrave or
                             db_entry.action == do_track then
                         -- can only smooth passable tiles
