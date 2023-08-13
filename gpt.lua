@@ -66,7 +66,7 @@ local is_debug_output_enabled = false
 -- Port on which to communicate with the python helper.
 local port = 5001
 
--- Max number of empty responses from the helper after receiving data before 
+-- Max number of empty responses from the helper after receiving data before
 -- assuming that the response is complete. (Each line is received individually.)
 local max_retries = 5
 
@@ -79,7 +79,7 @@ local client_timeout_secs = 60
 -- Milliseconds to configure the client object's timeout.
 local client_timeout_msecs = 0
 
--- Total client timeout time. 
+-- Total client timeout time.
 local timeout = client_timeout_secs + client_timeout_msecs/1000
 
 -- Number of onRenderFrame events to wait before polling again.
@@ -92,10 +92,10 @@ local star_chart_prompt = 'render an ASCII-art Dwarf Fortress star-chart inspire
 -- Local config filename.
 local config = config or json.open('dfhack-config/gpt.json')
 
--- User-facing list of valid content types that the script currently supports. 
+-- User-facing list of valid content types that the script currently supports.
 local valid_content_type_list = (function()
   local list = 'a '
-  
+
   local size = (function()
     local count = 0
     for _ in pairs(Content_Type) do count = count + 1 end
@@ -107,13 +107,13 @@ local valid_content_type_list = (function()
 
   for key, content_type in pairs(Content_Type) do
     if key == Content_Type.unsupported then goto continue end
-    
+
     if index == last_supported_index then
       list = list .. 'or ' .. content_type .. '.'
-    else 
+    else
       list = list .. content_type .. ', '
     end
-      
+
     index = index + 1
     ::continue::
   end
@@ -125,7 +125,7 @@ end)()
 -- STATE VARS
 --
 
--- Tracks the state of the script to manage execution flow. 
+-- Tracks the state of the script to manage execution flow.
 local current_status = Status.start
 
 -- Stores a reference to the client object while waiting/receiving a request.
@@ -162,7 +162,7 @@ local function debug_log(text)
   if is_debug_output_enabled then print(text) end
 end
 
--- Saves any configuration data to a JSON file. 
+-- Saves any configuration data to a JSON file.
 local function save_config(data)
   utils.assign(config.data, data)
   config:write()
@@ -184,7 +184,7 @@ local function content_type_of(knowledge_text, is_knowledge_skill)
     if content_type == Content_Type.essay or content_type == Content_Type.autobiography then
       knowledge_skill_prefix = 'is an '
     end
-    
+
     if is_knowledge_skill then
       search_string = knowledge_skill_prefix .. search_string
     end
@@ -207,13 +207,13 @@ local function knowledge_item_description()
   end
 
   local current_content_type = content_type_of(knowledge_text, false)
-  
+
   return knowledge_text, current_content_type
 end
 
 -- Returns the in-game description of the currently selected written content, or nil if none is shown.
 -- Also updates the UI to prompt the user for appropriate action.
-local function knowledge_description() 
+local function knowledge_description()
   local view_sheet = df.global.game.main_interface.view_sheets
 
   if view_sheet.active_sheet == 1 then
@@ -266,13 +266,13 @@ local function promptFrom(knowledge_description, content_type)
   if content_type == Content_Type.poem then
     debug_log('Creating poem.')
     prompt_value = 'Please write a poem given the following description of the poem and its style: \n\n'..knowledge_description
-  elseif Content_Type[content_type] == Content_Type.star_chart then 
+  elseif Content_Type[content_type] == Content_Type.star_chart then
     debug_log('Creating star chart.')
     prompt_value = 'Considering the star chart description between the >>> <<< below, ' .. star_chart_prompt .. ' >>> ' .. knowledge_description .. ' <<< '
   elseif content_type == Content_Type.unsupported then
     debug_log('Creating error response.')
     prompt_value = 'Return a response stating simply, "There has been an error."'
-  else    
+  else
     debug_log('Creating prompt for non-poem/non-star-chart/non-unsupported content_type: ' .. content_type)
     prompt_value = 'In between the four carrots is a description of a written ' .. content_type .. ': ^^^^' .. knowledge_description .. '^^^^. \n\n' .. excerpts_prompt
   end
@@ -282,7 +282,7 @@ end
 
 -- Returns a properly formatted json request to send to
 -- the gptserver.py script for submission to OpenAI APIs.
-local function request_from(knowledge_description, content_type)   
+local function request_from(knowledge_description, content_type)
   local payload = {
     prompt = promptFrom(knowledge_description, content_type)
   }
@@ -300,7 +300,7 @@ local function make_client()
 end
 
 -- Tears down the `client` state var and resets the `total_data` and `current_status` state vars.
-local function stop_polling(client)  
+local function stop_polling(client)
   debug_log('Final generated text:' .. gui_text)
   set_current_status(Status.done)
   debug_log('Done polling. Closing client and processing the response.\n')
@@ -308,7 +308,7 @@ local function stop_polling(client)
   client = nil
   debug_log('Final status: ' .. current_status .. '\n')
   total_data = ''
-  debug_log('Set gui_text to generated text, updating layout...')  
+  debug_log('Set gui_text to generated text, updating layout...')
   set_current_status(Status.start)
 end
 
@@ -335,10 +335,10 @@ local function update_progress_indicator()
   gui_text = gui_text:sub(1, gui_text:len() - 2) .. ' ' .. progress_symbol
 end
 
--- Tries to get the latest data from the client while updating state vars used for 
+-- Tries to get the latest data from the client while updating state vars used for
 -- tracking progress of polling.
 local function poll(client)
-  if current_status == Status.done or current_status == Status.start then 
+  if current_status == Status.done or current_status == Status.start then
     qerror('Callback tried to poll without being in receiving or waiting status. Status was: ' .. string_from_Status(current_status))
   end
 
@@ -350,7 +350,7 @@ local function poll(client)
 
   if data then
     retries = 0
-    if current_status == Status.waiting then 
+    if current_status == Status.waiting then
       set_current_status(Status.receiving)
     elseif current_status ~= Status.receiving then
       qerror('Error: data received by polling while status was ' .. string_from_Status(current_status))
@@ -360,19 +360,19 @@ local function poll(client)
 
     if string.find(data, "Excerpt") then
       total_data = total_data .. NEWLINE .. NEWLINE .. sanitized_data
-    else 
+    else
       total_data = total_data .. NEWLINE .. sanitized_data
     end
 
     gui_text = total_data
-  else 
+  else
     if current_status == Status.receiving then
       if retries >= max_retries then
         debug_log("Max retries reached.")
-        retries = 0 
+        retries = 0
         stop_polling(client)
         return
-      else 
+      else
         retries = retries + 1
       end
     elseif current_status == Status.waiting then
@@ -380,7 +380,7 @@ local function poll(client)
     end
   end
 
-  if os.difftime(os.time(), start_time) >= timeout then 
+  if os.difftime(os.time(), start_time) >= timeout then
     debug_log('Reached time limit of ' .. timeout .. ', stopping polling.')
     retries = 0
     stop_polling(client)
@@ -405,8 +405,8 @@ function fetch_generated_text()
   skip = skip + 1
   if skip < 20 then return end
   skip = 0
-  
-  if current_status ~= Status.start then 
+
+  if current_status ~= Status.start then
     debug_log("Current status was not start status, aborting. Status was: " .. string_from_Status(current_status))
     return
   end
@@ -509,7 +509,7 @@ function GPTWindow:onRenderFrame(dc, rect)
       if poll_count == polling_interval then
         poll(client)
         poll_count = 0
-      else 
+      else
         poll_count = poll_count + 1
       end
     end

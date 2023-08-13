@@ -6,9 +6,9 @@ gpt
     :tags: fort gameplay
 
 Enables a UI for submitting knowledge item descriptions to OpenAI for generating
-poetry, star charts, and excerpts from longer works such as biographies, dictionaries, 
-treatises on technological evolution, comparative biographies, cultural histories, 
-autobiographies, cultural comparisons, essays, guides, manuals, and more. 
+poetry, star charts, and excerpts from longer works such as biographies, dictionaries,
+treatises on technological evolution, comparative biographies, cultural histories,
+autobiographies, cultural comparisons, essays, guides, manuals, and more.
 
 ``enable gpt``
 =======
@@ -30,13 +30,13 @@ Setup:
 Once the python helper is running, you may now enable and use the gpt plugin.
 
 The python script defaults to using the fast, cheap, legacy model `text-davinci-003`.
-If you wish to use the slower, more expensive `gpt-3.5-turbo` or `gpt-4` models, you 
+If you wish to use the slower, more expensive `gpt-3.5-turbo` or `gpt-4` models, you
 can start the script with `python gptserver.py -gpt3` or `python gptserver.py -gpt4`.
-Tweaking additional OpenAI API parameters will require modifying `gptserver.py` to suit 
+Tweaking additional OpenAI API parameters will require modifying `gptserver.py` to suit
 your particular desires, until such time as someone may have added additional
 configuration options in a future update to DFHack :D
 
-Note: EVERY TEXT YOU GENERATE COSTS $$ if you are on a paid account. The fee is appx. $0.005 USD 
+Note: EVERY TEXT YOU GENERATE COSTS $$ if you are on a paid account. The fee is appx. $0.005 USD
       at the time of this writing. YMMV!
 
 Versions of python dependencies tested with:
