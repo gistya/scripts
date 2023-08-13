@@ -40,7 +40,7 @@ if len(sys.argv) > 1:
         print("using gpt-3.5-turbo")
     elif model_selection == "-gpt4":
         model_to_use = "gpt-4"
-        print("using gpt-4") 
+        print("using gpt-4")
     elif model_selection == "help" or model_selection == "-help" or model_selection == "--help":
         print("`python gptserver.py` defaults to fast, cheap, legacy AI engine `text-davinci-003`")
         print("Valid options:")
@@ -50,7 +50,7 @@ if len(sys.argv) > 1:
     else:
         print("Invalid argument(s), aborting.")
         sys.exit(1)
-else: 
+else:
     print("Defaulting to model: `text-davinci-003`. Use -gpt3 or -gpt4 args for alternates. -help for details!")
 
 while True:
@@ -60,19 +60,19 @@ while True:
         if address[0] != '127.0.0.1':
             print('Attempt to connect from remote address was detected! Closing server. Remote address and NAT port were: ', address)
             sys.exit(1)
-        
+
         data = conn.recv(1024*10)
         data = data.decode("utf-8")
         data = json.loads(data)
-        
+
         if "prompt" in data:
             prompt = data["prompt"]
-            print("Sending request for prompt: " + prompt)  
+            print("Sending request for prompt: " + prompt)
             if model_to_use == "gpt-4" or model_to_use == "gpt-3.5-turbo":
                 response = openai.ChatCompletion.create(
                     model=model_to_use,
                     messages=[
-                        { 
+                        {
                             "role": "user",
                             "content": prompt
                         }
@@ -83,7 +83,7 @@ while True:
                     frequency_penalty=0,
                     presence_penalty=0
                 )
-                    
+
                 response_text = response.choices[0].message.content.strip() + "\n"
                 print("Got reponse: " + response_text)
                 conn.sendall(response_text.encode("utf-8"))
@@ -95,7 +95,7 @@ while True:
                     prompt=prompt,
                     max_tokens=3000
                 )
-                
+
                 response_text = response.choices[0].text.strip() + "\n"
                 print("Got reponse: " + response_text)
                 conn.sendall(response_text.encode("utf-8"))
