@@ -30,30 +30,37 @@ def signal_handler(sig, frame):
 # Register the signal handler
 signal.signal(signal.SIGINT, signal_handler)
 
-model_selection = sys.argv[1]
 model_to_use = "text-davinci-003"
 
-if model_selection == "-gpt3":
-    model_to_use = "gpt-3.5-turbo"
-    print("using gpt-3.5-turbo")
-elif model_selection == "-gpt4":
-    model_to_use = "gpt-4"
-    print("using gpt-4") 
-elif model_selection == "help" or model_selection == "-help" or model_selection == "--help":
-    print("`python gptserver.py` defaults to fast, cheap, legacy AI engine `text-davinci-003`")
-    print("Valid options:")
-    print("  -gpt3 (uses slower, pricier `gpt-3.5-turbo` model)")
-    print("  -gpt4 (uses MUCH slower, MUCH pricier `gpt-4` model)")
-    print("Note: we found gpt4 gave by far the best results!")
-elif not model_selection:
+if len(sys.argv) > 1:
+    model_selection = sys.argv[1]
+
+    if model_selection == "-gpt3":
+        model_to_use = "gpt-3.5-turbo"
+        print("using gpt-3.5-turbo")
+    elif model_selection == "-gpt4":
+        model_to_use = "gpt-4"
+        print("using gpt-4") 
+    elif model_selection == "help" or model_selection == "-help" or model_selection == "--help":
+        print("`python gptserver.py` defaults to fast, cheap, legacy AI engine `text-davinci-003`")
+        print("Valid options:")
+        print("  -gpt3 (uses slower, pricier `gpt-3.5-turbo` model)")
+        print("  -gpt4 (uses MUCH slower, MUCH pricier `gpt-4` model)")
+        print("Note: we found gpt4 gave by far the best results!")
+    else:
+        print("Invalid argument(s), aborting.")
+        sys.exit(1)
+else: 
     print("Defaulting to model: `text-davinci-003`. Use -gpt3 or -gpt4 args for alternates. -help for details!")
-else:
-    print("Invalid argument(s), aborting.")
-    sys.exit(1)
 
 while True:
     try:
         (conn, address) = serversocket.accept()
+
+        if address[0] != '127.0.0.1':
+            print('Attempt to connect from remote address was detected! Closing server. Remote address and NAT port were: ', address)
+            sys.exit(1)
+        
         data = conn.recv(1024*10)
         data = data.decode("utf-8")
         data = json.loads(data)
