@@ -2,7 +2,7 @@ gpt
 ===
 
 .. dfhack-tool::
-    :summary: AI-generated written content!
+    :summary: AI-generated written content.
     :tags: fort gameplay
 
 Enables a UI for submitting knowledge item descriptions to OpenAI for generating
