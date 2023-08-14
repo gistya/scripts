@@ -22,7 +22,7 @@ Setup:
 
 1. [Register for a free trial or paid OpenAI API account](https://openai.com/product).
 2. Generate an API token for your account.
-3. Save your OpenAI API token to a file at the root of your DF directory, `oaak.txt`.
+3. Save your OpenAI API token to a file `oaak.txt` in the dfhack_config directory at the root of your DF directory.
 4. Install python. We used version 3.11 installed from the Microsoft Store.
 5. Install python dependencies Flask and OpenAI: `pip install Flask` and `pip install OpenAI`.
 6. Start the local helper python app: cd into dfhack/scripts directory & run `python srv/gptserver.py`.
