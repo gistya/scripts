@@ -1,5 +1,5 @@
 gpt
-=======
+===
 
 .. dfhack-tool::
     :summary: AI-generated written content!
@@ -11,11 +11,11 @@ treatises on technological evolution, comparative biographies, cultural historie
 autobiographies, cultural comparisons, essays, guides, manuals, and more.
 
 ``enable gpt``
-=======
+==============
 Enables the plugin. The overlay will be shown when a knowledge item or unit view sheet is open.
 
 ``disable gpt``
-=======
+===============
 Disables the plugin.
 
 Setup:
@@ -25,19 +25,19 @@ Setup:
 3. Save your OpenAI API token to a file at the root of your DF directory, `oaak.txt`.
 4. Install python. We used version 3.11 installed from the Microsoft Store.
 5. Install python dependencies Flask and OpenAI: `pip install Flask` and `pip install OpenAI`.
-6. Start the local helper python app: cd into dfhack/scripts directory & run `python gptserver.py`.
+6. Start the local helper python app: cd into dfhack/scripts directory & run `python srv/gptserver.py`.
 
 Once the python helper is running, you may now enable and use the gpt plugin.
 
 The python script defaults to using the fast, cheap, legacy model `text-davinci-003`.
 If you wish to use the slower, more expensive `gpt-3.5-turbo` or `gpt-4` models, you
-can start the script with `python gptserver.py -gpt3` or `python gptserver.py -gpt4`.
+can start the script with `python srv/gptserver.py -gpt3` or `python srv/gptserver.py -gpt4`.
 Tweaking additional OpenAI API parameters will require modifying `gptserver.py` to suit
-your particular desires, until such time as someone may have added additional
-configuration options in a future update to DFHack :D
+your particular needs.
 
-Note: EVERY TEXT YOU GENERATE COSTS $$ if you are on a paid account. The fee is appx. $0.005 USD
-      at the time of this writing. YMMV!
+Please refer to https://openai.com/pricing for current pricing information. As of Aug. 2023,
+the price for a request/response using `-gpt3` mode would be expected to be two to three cents, &
+OpenAI offers a free $5 trial API credit for 90 days when you first register.
 
 Versions of python dependencies tested with:
 
