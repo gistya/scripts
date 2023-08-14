@@ -390,8 +390,13 @@ end
 
 -- Sends json request to the remote service helper.
 local function send(request)
+  if not pcall(function() client = make_client() end) then
+    gui_text = 'Helper server is not running. cd into dfhack/scripts and run `python srv/gptserver.py` to start it. Press escape twice to close the current views, run gptserver.py, then reopen this window to generate the text.'
+    last_knowledge_description = nil
+    return
+  end
+
   set_current_status(Status.waiting)
-  client = make_client()
   start_time = os.time()
   debug_log('Sending request... \n')
   client:send(request)
@@ -550,6 +555,3 @@ end
 
 debug_log('Loaded GPT.')
 debug_log('valid content types: ' .. valid_content_type_list)
-
--- TODO: make into a test
--- debug_log(sanitize_response('"In my pursuit of mastery as a brewer, I stumbled upon an ancient tome hidden amidst a mountain of forgotten manuscripts in the vast library of Keyspirals. Its brittle pages whispered secrets lost to time, revealing a long-forgotten recipe for a peculiar beverage known as \'Dwarven Dream Draught.\' Intrigued by its mystical allure, I dedicated countless hours to deciphering its cryptic instructions. The concoction required rare ingredients, painstakingly procured from the most elusive corners of the world – the crystallized tears of a mountain nymph, the petrified scales of a mythical fire-breathing dragon, and a single drop of moonlight captured on the night of a lunar eclipse. As I blended these exotic components with precision, a magical transformation took place. The resulting elixir possessed an otherworldly glow and an enchanting taste that transcended mortal expectations. This brew became my legacy, forever whispering of the boundless creativity and unwavering dedication of the dwarven race."'))
