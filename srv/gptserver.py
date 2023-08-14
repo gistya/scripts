@@ -5,7 +5,7 @@ import signal
 import sys
 
 # Read API key from file
-with open("../../../oaak.txt", "r") as file:
+with open("../../../dfhack-config/oaak.txt", "r") as file:
     api_key = file.read().strip()
 
 print("Proceeding with API key froam oaak.txt.")
