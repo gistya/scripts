@@ -20,7 +20,7 @@ Disables the plugin.
 
 Setup:
 
-1. Register for an OpenAI API account. It must be a paid or active trial account.
+1. [Register for a free trial or paid OpenAI API account](https://openai.com/product).
 2. Generate an API token for your account.
 3. Save your OpenAI API token to a file at the root of your DF directory, `oaak.txt`.
 4. Install python. We used version 3.11 installed from the Microsoft Store.
