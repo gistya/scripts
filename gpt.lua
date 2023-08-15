@@ -1,7 +1,6 @@
 --@ module = true
 
 local json = require('json')
-local dfhack = require('dfhack')
 local utils = require('utils')
 local luasocket = require('plugins.luasocket')
 local gui = require('gui')
