@@ -12,7 +12,7 @@ function rejuvenate(unit, force, dry_run, age)
     local new_birth_year = current_year - age
     local name = dfhack.df2console(dfhack.TranslateName(dfhack.units.getVisibleName(unit)))
     if unit.birth_year > new_birth_year and not force then
-        print(name .. ' is under ' .. age .. ' years old. Use -force to force.')
+        print(name .. ' is under ' .. age .. ' years old. Use --force to force.')
         return
     end
     if dry_run then
@@ -30,16 +30,11 @@ function rejuvenate(unit, force, dry_run, age)
 end
 
 function main(args)
-    local current_year, newbirthyear
     local units = {} --as:df.unit[]
     if args.all then
-        for _, u in ipairs(df.global.world.units.all) do
-            if dfhack.units.isCitizen(u) then
-                table.insert(units, u)
-            end
-        end
+        units = dfhack.units.getCitizens()
     else
-        table.insert(units, dfhack.gui.getSelectedUnit(true) or qerror("No unit under cursor! Aborting."))
+        table.insert(units, dfhack.gui.getSelectedUnit(true) or qerror("Please select a unit in the UI."))
     end
     for _, u in ipairs(units) do
         rejuvenate(u, args.force, args['dry-run'], args.age)

@@ -6,10 +6,15 @@ local argparse = require('argparse')
 local function fix_seeds(quiet)
     local count = 0
     for _,v in ipairs(df.global.world.items.other.SEEDS) do
-        if not v.flags.in_building then
+        if (not v.flags.in_job) and (not v.flags.in_building) then
             local bld = dfhack.items.getHolderBuilding(v)
             if bld and bld:isFarmPlot() then
                 v.flags.in_building = true
+                for _,i in ipairs(bld.contained_items) do
+                    if i.item.id == v.id then
+                        i.use_mode = df.building_item_role_type.PERM
+                    end
+                end
                 count = count + 1
             end
         end

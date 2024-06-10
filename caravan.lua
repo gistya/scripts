@@ -2,6 +2,7 @@
 --@ module = true
 
 local movegoods = reqscript('internal/caravan/movegoods')
+local pedestal = reqscript('internal/caravan/pedestal')
 local trade = reqscript('internal/caravan/trade')
 local tradeagreement = reqscript('internal/caravan/tradeagreement')
 
@@ -19,7 +20,9 @@ OVERLAY_WIDGETS = {
     tradebanner=trade.TradeBannerOverlay,
     tradeagreement=tradeagreement.TradeAgreementOverlay,
     movegoods=movegoods.MoveGoodsOverlay,
+    movegoods_hider=movegoods.MoveGoodsHiderOverlay,
     assigntrade=movegoods.AssignTradeOverlay,
+    displayitemselector=pedestal.PedestalOverlay,
 }
 
 INTERESTING_FLAGS = {
@@ -90,6 +93,26 @@ function commands.leave(...)
     for id, car in pairs(caravans_from_ids{...}) do
         car.trade_state = df.caravan_state.T_trade_state.Leaving
     end
+    local still_needs_broker = false
+    for _,car in ipairs(caravans) do
+        if car.trade_state == df.caravan_state.T_trade_state.Approaching or
+            car.trade_state == df.caravan_state.T_trade_state.AtDepot
+        then
+            still_needs_broker = true
+            break
+        end
+    end
+    if not still_needs_broker then
+        for _,depot in ipairs(df.global.world.buildings.other.TRADE_DEPOT) do
+            depot.trade_flags.trader_requested = false
+            for _, job in ipairs(depot.jobs) do
+                if job.job_type == df.job_type.TradeAtDepot then
+                    dfhack.job.removeJob(job)
+                    break
+                end
+            end
+        end
+    end
 end
 
 local function isDisconnectedPackAnimal(unit)
@@ -114,7 +137,7 @@ end
 local function rejoin_pack_animals()
     print('Reconnecting disconnected pack animals...')
     local found = false
-    for _, unit in pairs(df.global.world.units.active) do
+    for _, unit in ipairs(df.global.world.units.active) do
         if unit.flags1.merchant and isDisconnectedPackAnimal(unit) then
             local dragger = unit.following
             print(('  %s  <->  %s'):format(

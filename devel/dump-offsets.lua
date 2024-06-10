@@ -1,26 +1,5 @@
 -- Dump all global addresses
 
---[====[
-
-devel/dump-offsets
-==================
-
-.. warning::
-
-    THIS SCRIPT IS STRICTLY FOR DFHACK DEVELOPERS.
-
-    Running this script on a new DF version will NOT
-    MAKE IT RUN CORRECTLY if any data structures
-    changed, thus possibly leading to CRASHES AND/OR
-    PERMANENT SAVE CORRUPTION.
-
-This dumps the contents of the table of global addresses (new in 0.44.01).
-
-Passing global names as arguments calls setAddress() to set those globals'
-addresses in-game. Passing "all" does this for all globals.
-
-]====]
-
 GLOBALS = {}
 for k, v in pairs(df.global._fields) do
     GLOBALS[v.original_name] = k
@@ -50,13 +29,11 @@ else
     search = {0x12345678, 0x87654321, 0x89abcdef}
 end
 
-local addrs = {}
 function save_addr(name, addr)
     print(("<global-address name='%s' value='0x%x'/>"):format(name, addr))
     if iargs[name] or iargs.all then
         ms.found_offset(name, addr)
     end
-    addrs[name] = addr
 end
 
 local extended = false

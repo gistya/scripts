@@ -169,6 +169,7 @@ local function custom_stockpile(_, keys)
     if not db_entry then return nil end
     if token_and_label.label then
         db_entry.label = ('%s/%s'):format(db_entry.label, token_and_label.label)
+        db_entry.global_label = db_entry.label
     end
     if next(adjustments) then
         db_entry.adjustments[adjustments] = true
@@ -227,7 +228,7 @@ local function custom_stockpile(_, keys)
         props.wheelbarrows = nil
     end
     if props.links_only == 'true' then
-        db_entry.props.use_links_only = 1
+        ensure_key(db_entry.props, 'stockpile_flag').use_links_only = 1
         props.links_only = nil
     end
     if props.name then
@@ -257,12 +258,12 @@ local function configure_stockpile(bld, db_entry)
     for _,cat in ipairs(db_entry.categories) do
         local name = ('library/cat_%s'):format(cat)
         log('enabling stockpile category: %s', cat)
-        stockpiles.import_stockpile(name, {id=bld.id, mode='enable'})
+        stockpiles.import_settings(name, {id=bld.id, mode='enable'})
     end
     for adjlist in pairs(db_entry.adjustments or {}) do
         for _,adj in ipairs(adjlist) do
             log('applying stockpile preset: %s %s (filters=)', adj.mode, adj.name, table.concat(adj.filters or {}, ','))
-            stockpiles.import_stockpile(adj.name, {id=bld.id, mode=adj.mode, filters=adj.filters})
+            stockpiles.import_settings(adj.name, {id=bld.id, mode=adj.mode, filters=adj.filters})
         end
     end
 end
@@ -347,6 +348,7 @@ function get_stockpiles_by_name()
         if #pile.name > 0 then
             table.insert(ensure_key(piles, pile.name), pile)
         end
+        piles[pile.id] = pile
     end
     return piles
 end
@@ -357,6 +359,7 @@ local function get_workshops_by_name()
         if #shop.name > 0 then
             table.insert(ensure_key(shops, shop.name), shop)
         end
+        shops[shop.id] = shop
     end
     return shops
 end
@@ -364,12 +367,12 @@ end
 local function get_pile_targets(name, peer_piles, all_piles)
     if peer_piles[name] then return peer_piles[name], all_piles end
     all_piles = all_piles or get_stockpiles_by_name()
-    return all_piles[name], all_piles
+    return all_piles[name] or (all_piles[tonumber(name)] and {all_piles[tonumber(name)]}), all_piles
 end
 
 local function get_shop_targets(name, all_shops)
     all_shops = all_shops or get_workshops_by_name()
-    return all_shops[name], all_shops
+    return all_shops[name] or (all_shops[tonumber(name)] and {all_shops[tonumber(name)]}), all_shops
 end
 
 -- will link to stockpiles created in this blueprint
@@ -394,7 +397,7 @@ local function link_stockpiles(link_data)
                         utils.insert_sorted(node.to.links.take_from_workshop, from, 'id')
                     end
                 else
-                    dfhack.printerr(('cannot find stockpile or workshop named "%s" to take from'):format(name))
+                    dfhack.printerr(('cannot find stockpile or workshop with name or id "%s" to take from'):format(name))
                 end
             end
         elseif type(node.to) == 'string' then
@@ -413,7 +416,7 @@ local function link_stockpiles(link_data)
                         utils.insert_sorted(to.profile.links.take_from_pile, node.from, 'id')
                     end
                 else
-                    dfhack.printerr(('cannot find stockpile or workshop named "%s" to give to'):format(name))
+                    dfhack.printerr(('cannot find stockpile or workshop with name or id "%s" to give to'):format(name))
                 end
             end
         end

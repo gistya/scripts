@@ -21,6 +21,13 @@ local function has_stops(route)
     return #route.stops > 0
 end
 
+local function get_minecart(route)
+    if not has_minecart(route) then return end
+    local vehicle = utils.binsearch(df.global.world.vehicles.active, route.vehicle_ids[0], 'id')
+    if not vehicle then return end
+    return df.item.find(vehicle.item_id)
+end
+
 local function get_name(route)
     return route.name and #route.name > 0 and route.name or ('Route '..route.id)
 end
@@ -31,7 +38,7 @@ end
 
 local function assign_minecart_to_route(route, quiet, minecart)
     if has_minecart(route) then
-        return true
+        return get_minecart(route)
     end
     if not has_stops(route) then
         if not quiet then
@@ -57,11 +64,11 @@ local function assign_minecart_to_route(route, quiet, minecart)
         print(('Assigned a minecart to route %s.')
               :format(get_id_and_name(route)))
     end
-    return true
+    return df.item.find(minecart.item_id)
 end
 
 -- assign first free minecart to the most recently-created route
--- returns whether route now has a minecart assigned
+-- returns assigned minecart (or nil if assignment failed)
 function assign_minecart_to_last_route(quiet)
     local routes = df.global.plotinfo.hauling.routes
     local route_idx = #routes - 1

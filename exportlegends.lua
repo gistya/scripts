@@ -7,8 +7,6 @@ local overlay = require('plugins.overlay')
 local script = require('gui.script')
 local widgets = require('gui.widgets')
 
-local args = {...}
-
 -- Get the date of the world as a string
 -- Format: "YYYYY-MM-DD"
 local function get_world_date_str()
@@ -45,9 +43,8 @@ local function table_containskey(self, key)
 end
 
 progress_item = progress_item or ''
-step_size = step_size or 1
-step_percent = -1
-progress_percent = progress_percent or -1
+num_done = num_done or -1
+num_total = num_total or -1
 last_update_ms = 0
 
 -- should be frequent enough so that user can still effectively use
@@ -63,13 +60,16 @@ local function yield_if_timeout()
 end
 
 --luacheck: skip
-local function progress_ipairs(vector, desc, interval)
+local function progress_ipairs(vector, desc, skip_count, interval)
     desc = desc or 'item'
+    progress_item = desc
     interval = interval or 10000
     local cb = ipairs(vector)
     return function(vector, k, ...)
+        if not skip_count then
+            num_done = num_done + 1
+        end
         if k then
-            progress_percent = math.max(progress_percent, step_percent + ((k * step_size) // #vector))
             if #vector >= interval and (k % interval == 0 or k == #vector - 1) then
                 print(('        %s %i/%i (%0.f%%)'):format(desc, k, #vector, (k * 100) / #vector))
             end
@@ -77,6 +77,22 @@ local function progress_ipairs(vector, desc, interval)
         yield_if_timeout()
         return cb(vector, k)
     end, vector, nil
+end
+
+local function make_chunk(name, vector, fn)
+    num_total = num_total + #vector
+    return {
+        name=name,
+        vector=vector,
+        fn=fn,
+    }
+end
+
+local function write_chunk(file, chunk)
+    yield_if_timeout()
+    file:write("<" .. chunk.name .. ">\n")
+    chunk.fn(chunk.vector)
+    file:write("</" .. chunk.name .. ">\n")
 end
 
 -- wrapper that returns "unknown N" for df.enum_type[BAD_VALUE],
@@ -107,11 +123,13 @@ local function printifvalue (file, indentation, tag, value)
     end
 end
 
+local world = df.global.world
+
 -- Export additional legends data, legends_plus.xml
 local function export_more_legends_xml()
     local problem_elements = {}
 
-    local filename = df.global.world.cur_savegame.save_dir.."-"..get_world_date_str().."-legends_plus.xml"
+    local filename = world.cur_savegame.save_dir.."-"..get_world_date_str().."-legends_plus.xml"
     local file = io.open(filename, 'w')
     if not file then
       qerror("could not open file: " .. filename)
@@ -120,21 +138,13 @@ local function export_more_legends_xml()
 
     file:write("<?xml version=\"1.0\" encoding='UTF-8'?>\n")
     file:write("<df_world>\n")
-    file:write("<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(df.global.world.world_data.name))).."</name>\n")
-    file:write("<altname>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(df.global.world.world_data.name,1))).."</altname>\n")
-
-    local function write_chunk(name, fn)
-        progress_item = name
-        yield_if_timeout()
-        file:write("<" .. name .. ">\n")
-        fn()
-        file:write("</" .. name .. ">\n")
-    end
+    file:write("<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(world.world_data.name))).."</name>\n")
+    file:write("<altname>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(world.world_data.name,1))).."</altname>\n")
 
     local chunks = {}
 
-    table.insert(chunks, {name='landmasses', fn=function()
-    for landmassK, landmassV in progress_ipairs(df.global.world.world_data.landmasses, 'landmass') do
+    table.insert(chunks, make_chunk('landmasses', world.world_data.landmasses, function(vector)
+    for landmassK, landmassV in progress_ipairs(vector, 'landmasses') do
         file:write("\t<landmass>\n")
         file:write("\t\t<id>"..landmassV.index.."</id>\n")
         file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(landmassV.name,1))).."</name>\n")
@@ -142,10 +152,10 @@ local function export_more_legends_xml()
         file:write("\t\t<coord_2>"..landmassV.max_x..","..landmassV.max_y.."</coord_2>\n")
         file:write("\t</landmass>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='mountain_peaks', fn=function()
-    for mountainK, mountainV in progress_ipairs(df.global.world.world_data.mountain_peaks, 'mountain') do
+    table.insert(chunks, make_chunk('mountain_peaks', world.world_data.mountain_peaks, function(vector)
+    for mountainK, mountainV in progress_ipairs(vector, 'mountains') do
         file:write("\t<mountain_peak>\n")
         file:write("\t\t<id>"..mountainK.."</id>\n")
         file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(mountainV.name,1))).."</name>\n")
@@ -156,10 +166,10 @@ local function export_more_legends_xml()
         end
         file:write("\t</mountain_peak>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='regions', fn=function()
-    for regionK, regionV in progress_ipairs(df.global.world.world_data.regions, 'region') do
+    table.insert(chunks, make_chunk('regions', world.world_data.regions, function(vector)
+    for regionK, regionV in progress_ipairs(vector, 'regions') do
         file:write("\t<region>\n")
         file:write("\t\t<id>"..regionV.index.."</id>\n")
         file:write("\t\t<coords>")
@@ -179,10 +189,10 @@ local function export_more_legends_xml()
         end
         file:write("\t</region>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='underground_regions', fn=function()
-    for regionK, regionV in progress_ipairs(df.global.world.world_data.underground_regions, 'underground region') do
+    table.insert(chunks, make_chunk('underground_regions', world.world_data.underground_regions, function(vector)
+    for regionK, regionV in progress_ipairs(vector, 'underground region') do
         file:write("\t<underground_region>\n")
         file:write("\t\t<id>"..regionV.index.."</id>\n")
         file:write("\t\t<coords>")
@@ -192,14 +202,14 @@ local function export_more_legends_xml()
         file:write("</coords>\n")
         file:write("\t</underground_region>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='rivers', fn=function()
-    for riverK, riverV in progress_ipairs(df.global.world.world_data.rivers, 'river') do
+    table.insert(chunks, make_chunk('rivers', world.world_data.rivers, function(vector)
+    for riverK, riverV in progress_ipairs(vector, 'rivers') do
         file:write("\t<river>\n")
         file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(riverV.name, 1))).."</name>\n")
         file:write("\t\t<path>")
-        for pathK, pathV in progress_ipairs(riverV.path.x, 'river section') do
+        for pathK, pathV in progress_ipairs(riverV.path.x, 'river section', true) do
             file:write(pathV..","..riverV.path.y[pathK]..",")
             file:write(riverV.flow[pathK]..",")
             file:write(riverV.exit_tile[pathK]..",")
@@ -209,10 +219,10 @@ local function export_more_legends_xml()
         file:write("\t\t<end_pos>"..riverV.end_pos.x..","..riverV.end_pos.y.."</end_pos>\n")
         file:write("\t</river>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='creature_raw', fn=function()
-    for creatureK, creatureV in ipairs (df.global.world.raws.creatures.all) do
+    table.insert(chunks, make_chunk('creature_raw', world.raws.creatures.all, function(vector)
+    for creatureK, creatureV in ipairs (vector) do
         file:write("\t<creature>\n")
         file:write("\t\t<creature_id>"..creatureV.creature_id.."</creature_id>\n")
         file:write("\t\t<name_singular>"..escape_xml(dfhack.df2utf(creatureV.name[0])).."</name_singular>\n")
@@ -224,10 +234,10 @@ local function export_more_legends_xml()
         end
         file:write("\t</creature>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='sites', fn=function()
-    for siteK, siteV in progress_ipairs(df.global.world.world_data.sites, 'site') do
+    table.insert(chunks, make_chunk('sites', world.world_data.sites, function(vector)
+    for siteK, siteV in progress_ipairs(vector, 'sites') do
         file:write("\t<site>\n")
         for k,v in pairs(siteV) do
             if (k == "id" or k == "civ_id" or k == "cur_owner_id") then
@@ -246,9 +256,9 @@ local function export_more_legends_xml()
                         end
                         if df.abstract_building_templest:is_instance(buildingV) then
                             file:write("\t\t\t\t<deity_type>"..buildingV.deity_type.."</deity_type>\n")
-                            if buildingV.deity_type == df.temple_deity_type.Deity then
+                            if buildingV.deity_type == df.religious_practice_type.WORSHIP_HFID then
                                 file:write("\t\t\t\t<deity>"..buildingV.deity_data.Deity.."</deity>\n")
-                            elseif buildingV.deity_type == df.temple_deity_type.Religion then
+                            elseif buildingV.deity_type == df.religious_practice_type.RELIGION_ENID then
                                 file:write("\t\t\t\t<religion>"..buildingV.deity_data.Religion.."</religion>\n")
                             end
                         end
@@ -266,10 +276,10 @@ local function export_more_legends_xml()
         end
         file:write("\t</site>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='world_constructions', fn=function()
-    for wcK, wcV in progress_ipairs(df.global.world.world_data.constructions.list, 'construction') do
+    table.insert(chunks, make_chunk('world_constructions', world.world_data.constructions.list, function(vector)
+    for wcK, wcV in progress_ipairs(vector, 'constructions') do
         file:write("\t<world_construction>\n")
         file:write("\t\t<id>"..wcV.id.."</id>\n")
         file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(wcV.name,1))).."</name>\n")
@@ -281,10 +291,10 @@ local function export_more_legends_xml()
         file:write("</coords>\n")
         file:write("\t</world_construction>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='artifacts', fn=function()
-    for artifactK, artifactV in progress_ipairs(df.global.world.artifacts.all, 'artifact') do
+    table.insert(chunks, make_chunk('artifacts', world.artifacts.all, function(vector)
+    for artifactK, artifactV in progress_ipairs(vector, 'artifacts') do
         file:write("\t<artifact>\n")
         file:write("\t\t<id>"..artifactV.id.."</id>\n")
         local item = artifactV.item
@@ -314,20 +324,20 @@ local function export_more_legends_xml()
         end
         file:write("\t</artifact>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='historical_figures', fn=function()
-    for hfK, hfV in progress_ipairs(df.global.world.history.figures, 'historical figure') do
+    table.insert(chunks, make_chunk('historical_figures', world.history.figures, function(vector)
+    for hfK, hfV in progress_ipairs(vector, 'historical figures') do
         file:write("\t<historical_figure>\n")
         file:write("\t\t<id>"..hfV.id.."</id>\n")
         file:write("\t\t<sex>"..hfV.sex.."</sex>\n")
         if hfV.race >= 0 then file:write("\t\t<race>"..escape_xml(dfhack.df2utf(df.creature_raw.find(hfV.race).name[0])).."</race>\n") end
         file:write("\t</historical_figure>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='identities', fn=function()
-    for idK, idV in progress_ipairs(df.global.world.identities.all, 'identity') do
+    table.insert(chunks, make_chunk('identities', world.identities.all, function(vector)
+    for idK, idV in progress_ipairs(vector, 'identities') do
         file:write("\t<identity>\n")
         file:write("\t\t<id>"..idV.id.."</id>\n")
         file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(idV.name,1))).."</name>\n")
@@ -337,35 +347,35 @@ local function export_more_legends_xml()
         else
             dfhack.printerr ("Unknown df.identity_type value encountered: "..tostring(idV.type)..". Please report to DFHack team.")
         end
-        if idV.race >= 0 then file:write("\t\t<race>"..(df.global.world.raws.creatures.all[idV.race].creature_id):lower().."</race>\n") end
-        if idV.race >= 0  and idV.caste >= 0 then file:write("\t\t<caste>"..(df.global.world.raws.creatures.all[idV.race].caste[idV.caste].caste_id):lower().."</caste>\n") end
+        if idV.race >= 0 then file:write("\t\t<race>"..(world.raws.creatures.all[idV.race].creature_id):lower().."</race>\n") end
+        if idV.race >= 0  and idV.caste >= 0 then file:write("\t\t<caste>"..(world.raws.creatures.all[idV.race].caste[idV.caste].caste_id):lower().."</caste>\n") end
         file:write("\t\t<birth_year>"..idV.birth_year.."</birth_year>\n")
         file:write("\t\t<birth_second>"..idV.birth_second.."</birth_second>\n")
         if idV.profession >= 0 then file:write("\t\t<profession>"..(df_enums.profession[idV.profession]):lower().."</profession>\n") end
         file:write("\t\t<entity_id>"..idV.entity_id.."</entity_id>\n")
         file:write("\t</identity>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='entity_populations', fn=function()
-    for entityPopK, entityPopV in progress_ipairs(df.global.world.entity_populations, 'entity population') do
+    table.insert(chunks, make_chunk('entity_populations', world.entity_populations, function(vector)
+    for entityPopK, entityPopV in progress_ipairs(vector, 'entity populations') do
         file:write("\t<entity_population>\n")
         file:write("\t\t<id>"..entityPopV.id.."</id>\n")
         for raceK, raceV in ipairs(entityPopV.races) do
-            local raceName = (df.global.world.raws.creatures.all[raceV].creature_id):lower()
+            local raceName = (world.raws.creatures.all[raceV].creature_id):lower()
             file:write("\t\t<race>"..raceName..":"..entityPopV.counts[raceK].."</race>\n")
         end
         file:write("\t\t<civ_id>"..entityPopV.civ_id.."</civ_id>\n")
         file:write("\t</entity_population>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='entities', fn=function()
-    for entityK, entityV in progress_ipairs(df.global.world.entities.all, 'entity') do
+    table.insert(chunks, make_chunk('entities', world.entities.all, function(vector)
+    for entityK, entityV in progress_ipairs(vector, 'entities') do
         file:write("\t<entity>\n")
         file:write("\t\t<id>"..entityV.id.."</id>\n")
         if entityV.race >= 0 then
-            file:write("\t\t<race>"..(df.global.world.raws.creatures.all[entityV.race].creature_id):lower().."</race>\n")
+            file:write("\t\t<race>"..(world.raws.creatures.all[entityV.race].creature_id):lower().."</race>\n")
         end
         file:write("\t\t<type>"..(df_enums.historical_entity_type[entityV.type]):lower().."</type>\n")
         if entityV.type == df.historical_entity_type.Religion or entityV.type == df.historical_entity_type.MilitaryUnit then -- Get worshipped figures
@@ -468,10 +478,10 @@ local function export_more_legends_xml()
         end
         file:write("\t</entity>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='historical_events', fn=function()
-    for ID, event in progress_ipairs(df.global.world.history.events, 'event') do
+    table.insert(chunks, make_chunk('historical_events', world.history.events, function(vector)
+    for ID, event in progress_ipairs(vector, 'historical events') do
         if df.history_event_add_hf_entity_linkst:is_instance(event)
               or df.history_event_add_hf_site_linkst:is_instance(event)
               or df.history_event_add_hf_hf_linkst:is_instance(event)
@@ -769,23 +779,23 @@ local function export_more_legends_xml()
                     end
                 elseif k == "race" then
                     if v > -1 then
-                        file:write("\t\t<race>"..escape_xml(dfhack.df2utf(df.global.world.raws.creatures.all[v].name[0])).."</race>\n")
+                        file:write("\t\t<race>"..escape_xml(dfhack.df2utf(world.raws.creatures.all[v].name[0])).."</race>\n")
                     end
                 elseif k == "caste" then
                     if v > -1 then
-                        file:write("\t\t<caste>"..(df.global.world.raws.creatures.all[event.race].caste[v].caste_id):lower().."</caste>\n")
+                        file:write("\t\t<caste>"..(world.raws.creatures.all[event.race].caste[v].caste_id):lower().."</caste>\n")
                     end
                 elseif k == "interaction" and df.history_event_hf_does_interactionst:is_instance(event) then
-                    if #df.global.world.raws.interactions[v].sources > 0 then
-                        local str_1 = df.global.world.raws.interactions[v].sources[0].hist_string_1
+                    if #world.raws.interactions[v].sources > 0 then
+                        local str_1 = world.raws.interactions[v].sources[0].hist_string_1
                         if string.sub (str_1, 1, 1) == " " and string.sub (str_1, string.len (str_1), string.len (str_1)) == " " then
                             str_1 = string.sub (str_1, 2, string.len (str_1) - 1)
                         end
-                        file:write("\t\t<interaction_action>"..str_1..df.global.world.raws.interactions[v].sources[0].hist_string_2.."</interaction_action>\n")
+                        file:write("\t\t<interaction_action>"..str_1..world.raws.interactions[v].sources[0].hist_string_2.."</interaction_action>\n")
                     end
                 elseif k == "interaction" and df.history_event_hf_learns_secretst:is_instance(event) then
-                    if #df.global.world.raws.interactions[v].sources > 0 then
-                        file:write("\t\t<secret_text>"..df.global.world.raws.interactions[v].sources[0].name.."</secret_text>\n")
+                    if #world.raws.interactions[v].sources > 0 then
+                        file:write("\t\t<secret_text>"..world.raws.interactions[v].sources[0].name.."</secret_text>\n")
                     end
                 elseif df.history_event_hist_figure_diedst:is_instance(event) and k == "weapon" then
                     for detailK,detailV in pairs(v) do
@@ -858,7 +868,7 @@ local function export_more_legends_xml()
                 elseif df.history_event_change_hf_jobst:is_instance(event) and (k == "new_job" or k == "old_job") then
                     file:write("\t\t<"..k..">"..df_enums.profession[v]:lower().."</"..k..">\n")
                 elseif df.history_event_change_creature_typest:is_instance(event) and (k == "old_race" or k == "new_race")  and v >= 0 then
-                    file:write("\t\t<"..k..">"..escape_xml(dfhack.df2utf(df.global.world.raws.creatures.all[v].name[0])).."</"..k..">\n")
+                    file:write("\t\t<"..k..">"..escape_xml(dfhack.df2utf(world.raws.creatures.all[v].name[0])).."</"..k..">\n")
                 elseif tostring(v):find ("<") then
                     if not problem_elements[tostring(event._type)] then
                         problem_elements[tostring(event._type)] = {}
@@ -884,10 +894,10 @@ local function export_more_legends_xml()
             file:write("\t</historical_event>\n")
         end
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='historical_event_relationships', fn=function()
-    for ID, set in progress_ipairs(df.global.world.history.relationship_events, 'relationship_event') do
+    table.insert(chunks, make_chunk('historical_event_relationships', world.history.relationship_events, function(vector)
+    for ID, set in progress_ipairs(vector, 'historical event relationships') do
         for k = 0, set.next_element - 1 do
             file:write("\t<historical_event_relationship>\n")
             file:write("\t\t<event>"..set.event[k].."</event>\n")
@@ -898,25 +908,25 @@ local function export_more_legends_xml()
             file:write("\t</historical_event_relationship>\n")
         end
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='historical_event_relationship_supplements', fn=function()
-    for ID, event in progress_ipairs(df.global.world.history.relationship_event_supplements, 'relationship_event_supplement') do
+    table.insert(chunks, make_chunk('historical_event_relationship_supplements', world.history.relationship_event_supplements, function(vector)
+    for ID, event in progress_ipairs(vector, 'historical event relationship supplements') do
         file:write("\t<historical_event_relationship_supplement>\n")
         file:write("\t\t<event>"..event.event.."</event>\n")
         file:write("\t\t<occasion_type>"..event.occasion_type.."</occasion_type>\n")
         file:write("\t\t<site>"..event.site.."</site>\n")
-        file:write("\t\t<unk_1>"..event.unk_1.."</unk_1>\n")
+        file:write("\t\t<reason>"..event.reason.."</reason>\n")
         file:write("\t</historical_event_relationship_supplement>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='historical_event_collections', fn=function() end})
+    table.insert(chunks, make_chunk('historical_event_collections', {}, function() end))
 
-    table.insert(chunks, {name='historical_eras', fn=function() end})
+    table.insert(chunks, make_chunk('historical_eras', {}, function() end))
 
-    table.insert(chunks, {name='written_contents', fn=function()
-    for wcK, wcV in progress_ipairs(df.global.world.written_contents.all) do
+    table.insert(chunks, make_chunk('written_contents', world.written_contents.all, function(vector)
+    for wcK, wcV in progress_ipairs(vector, 'written contents') do
         file:write("\t<written_content>\n")
         file:write("\t\t<id>"..wcV.id.."</id>\n")
         file:write("\t\t<title>"..escape_xml(dfhack.df2utf(wcV.title)).."</title>\n")
@@ -953,40 +963,37 @@ local function export_more_legends_xml()
         file:write("\t\t<author>"..wcV.author.."</author>\n")
         file:write("\t</written_content>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='poetic_forms', fn=function()
-    for formK, formV in progress_ipairs(df.global.world.poetic_forms.all, 'poetic form') do
+    table.insert(chunks, make_chunk('poetic_forms', world.poetic_forms.all, function(vector)
+    for formK, formV in progress_ipairs(vector, 'poetic forms') do
         file:write("\t<poetic_form>\n")
         file:write("\t\t<id>"..formV.id.."</id>\n")
         file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(formV.name,1))).."</name>\n")
         file:write("\t</poetic_form>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='musical_forms', fn=function()
-    for formK, formV in progress_ipairs(df.global.world.musical_forms.all, 'musical form') do
+    table.insert(chunks, make_chunk('musical_forms', world.musical_forms.all, function(vector)
+    for formK, formV in progress_ipairs(vector, 'musical forms') do
         file:write("\t<musical_form>\n")
         file:write("\t\t<id>"..formV.id.."</id>\n")
         file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(formV.name,1))).."</name>\n")
         file:write("\t</musical_form>\n")
     end
-    end})
+    end))
 
-    table.insert(chunks, {name='dance_forms', fn=function()
-    for formK, formV in progress_ipairs(df.global.world.dance_forms.all, 'dance form') do
+    table.insert(chunks, make_chunk('dance_forms', world.dance_forms.all, function(vector)
+    for formK, formV in progress_ipairs(vector, 'dance forms') do
         file:write("\t<dance_form>\n")
         file:write("\t\t<id>"..formV.id.."</id>\n")
         file:write("\t\t<name>"..escape_xml(dfhack.df2utf(dfhack.TranslateName(formV.name,1))).."</name>\n")
         file:write("\t</dance_form>\n")
     end
-    end})
+    end))
 
-    step_size = math.max(1, 100 // #chunks)
-    for k, chunk in ipairs(chunks) do
-        progress_percent = math.max(progress_percent, (100 * k) // #chunks)
-        step_percent = progress_percent
-        write_chunk(chunk.name, chunk.fn)
+    for _, chunk in ipairs(chunks) do
+        write_chunk(file, chunk)
     end
 
     file:write("</df_world>\n")
@@ -1009,19 +1016,19 @@ local function export_more_legends_xml()
 end
 
 local function wrap_export()
-    if progress_percent >= 0 then
+    if num_total >= 0 then
         qerror('exportlegends already in progress')
     end
-    progress_percent = 0
-    step_size = 1
+    num_total = 0
+    num_done = 0
     progress_item = 'basic info'
     yield_if_timeout()
     local ok, err = pcall(export_more_legends_xml)
     if not ok then
         dfhack.printerr(err)
     end
-    progress_percent = -1
-    step_size = 1
+    num_total = -1
+    num_done = -1
     progress_item = ''
 end
 
@@ -1031,6 +1038,7 @@ end
 
 LegendsOverlay = defclass(LegendsOverlay, overlay.OverlayWidget)
 LegendsOverlay.ATTRS{
+    desc='Adds extended export progress bar to the legends main screen.',
     default_pos={x=2, y=2},
     default_enabled=true,
     viewscreens='legends/Default',
@@ -1048,21 +1056,21 @@ function LegendsOverlay:init()
             subviews={
                 widgets.ToggleHotkeyLabel{
                     view_id='do_export',
-                    frame={t=0, l=1, w=53},
+                    frame={t=0, l=1, r=1},
                     label='Also export DFHack extended legends data:',
                     key='CUSTOM_CTRL_D',
-                    visible=function() return progress_percent < 0 end,
+                    visible=function() return num_total < 0 end,
                 },
                 widgets.Label{
                     frame={t=0, l=1},
                     text={
                         'Exporting ',
-                        {text=function() return progress_item end},
-                        ' (',
-                        {text=function() return progress_percent end, pen=COLOR_YELLOW},
-                        '% complete)'
+                        {width=27, text=function() return progress_item end},
+                        ' ',
+                        {text=function() return ('%.2f'):format((num_done * 100) / num_total) end, pen=COLOR_YELLOW},
+                        '% complete'
                     },
-                    visible=function() return progress_percent >= 0 end,
+                    visible=function() return num_total >= 0 end,
                 },
             },
         },
@@ -1070,7 +1078,7 @@ function LegendsOverlay:init()
 end
 
 function LegendsOverlay:onInput(keys)
-    if keys._MOUSE_L_DOWN and progress_percent < 0 and
+    if keys._MOUSE_L and num_total < 0 and
         self.subviews.button_mask:getMousePos() and
         self.subviews.do_export:getOptionValue()
     then
@@ -1085,6 +1093,7 @@ end
 
 DoneMaskOverlay = defclass(DoneMaskOverlay, overlay.OverlayWidget)
 DoneMaskOverlay.ATTRS{
+    desc='Prevents legends mode from being exited while an export is in progress.',
     default_pos={x=-2, y=2},
     default_enabled=true,
     viewscreens='legends',
@@ -1095,14 +1104,14 @@ function DoneMaskOverlay:init()
     self:addviews{
         widgets.Panel{
             frame_background=gui.CLEAR_PEN,
-            visible=function() return progress_percent >= 0 end,
+            visible=function() return num_total >= 0 end,
         }
     }
 end
 
 function DoneMaskOverlay:onInput(keys)
-    if progress_percent >= 0 then
-        if keys.LEAVESCREEN or (keys._MOUSE_L_DOWN and self:getMousePos()) then
+    if num_total >= 0 then
+        if keys.LEAVESCREEN or (keys._MOUSE_L and self:getMousePos()) then
             return true
         end
     end

@@ -3,7 +3,7 @@ modtools/pref-edit
 
 .. dfhack-tool::
     :summary: Modify unit preferences.
-    :tags: unavailable dev
+    :tags: unavailable
 
 Add, remove, or edit the preferences of a unit.
 Requires a modifier, a unit argument, and filters.

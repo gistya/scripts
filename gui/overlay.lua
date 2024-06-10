@@ -2,7 +2,6 @@
 --@ module = true
 
 local gui = require('gui')
-local guidm = require('gui.dwarfmode')
 local widgets = require('gui.widgets')
 
 local overlay = require('plugins.overlay')
@@ -11,7 +10,7 @@ local DIALOG_WIDTH = 59
 local LIST_HEIGHT = 14
 local HIGHLIGHT_TILE = df.global.init.load_bar_texpos[1]
 
-local SHADOW_FRAME = copyall(gui.PANEL_FRAME)
+local SHADOW_FRAME = gui.PANEL_FRAME()
 SHADOW_FRAME.signature_pen = false
 
 local to_pen = dfhack.pen.parse
@@ -58,7 +57,7 @@ DraggablePanel.ATTRS{
 }
 
 function DraggablePanel:onInput(keys)
-    if keys._MOUSE_L_DOWN then
+    if keys._MOUSE_L then
         local rect = self.frame_rect
         local x,y = self:getMousePos(gui.ViewRect{rect=rect})
         if x then
@@ -112,8 +111,7 @@ function OverlayConfig:init()
     -- prevent hotspot widgets from reacting
     overlay.register_trigger_lock_screen(self)
 
-    self.scr_name = overlay.simplify_viewscreen_name(
-            getmetatable(dfhack.gui.getDFViewscreen(true)))
+    local contexts = dfhack.gui.getFocusStrings(dfhack.gui.getDFViewscreen(true))
 
     local main_panel = widgets.Window{
         frame={w=DIALOG_WIDTH, h=LIST_HEIGHT+15},
@@ -124,13 +122,16 @@ function OverlayConfig:init()
     main_panel:addviews{
         widgets.Label{
             frame={t=0, l=0},
-            text={'Current screen: ', {text=self.scr_name, pen=COLOR_CYAN}}},
+            text={
+                'Current contexts: ',
+                {text=table.concat(contexts, ', '), pen=COLOR_CYAN}
+            }},
         widgets.CycleHotkeyLabel{
             view_id='filter',
             frame={t=2, l=0},
             key='CUSTOM_CTRL_O',
             label='Showing:',
-            options={{label='overlays for the current screen', value='cur'},
+            options={{label='overlays for the current contexts', value='cur'},
                      {label='all overlays', value='all'}},
             on_change=self:callback('refresh_list')},
         widgets.FilteredList{
@@ -174,6 +175,7 @@ end
 
 function OverlayConfig:refresh_list(filter)
     local choices = {}
+    local scr = dfhack.gui.getDFViewscreen(true)
     local state = overlay.get_state()
     local list = self.subviews.list
     local make_on_click_fn = function(idx)
@@ -183,16 +185,15 @@ function OverlayConfig:refresh_list(filter)
         local db_entry = state.db[name]
         local widget = db_entry.widget
         if widget.overlay_only then goto continue end
-        if not widget.hotspot and filter ~= 'all' then
-            local matched = false
-            for _,scr in ipairs(overlay.normalize_list(widget.viewscreens)) do
-                if overlay.simplify_viewscreen_name(scr):startswith(self.scr_name) then
-                    matched = true
-                    break
+        if (not widget.hotspot or #widget.viewscreens > 0) and filter ~= 'all' then
+            for _,vs in ipairs(overlay.normalize_list(widget.viewscreens)) do
+                if dfhack.gui.matchFocusString(overlay.simplify_viewscreen_name(vs), scr) then
+                    goto matched
                 end
             end
-            if not matched then goto continue end
+            goto continue
         end
+        ::matched::
         local panel = nil
         panel = DraggablePanel{
                 frame=make_highlight_frame(widget.frame),
@@ -282,7 +283,7 @@ function OverlayConfig:onInput(keys)
             return true
         end
     end
-    if keys.LEAVESCREEN or keys._MOUSE_R_DOWN then
+    if keys.LEAVESCREEN or keys._MOUSE_R then
         self:dismiss()
         return true
     end
@@ -291,12 +292,14 @@ function OverlayConfig:onInput(keys)
             return true
         end
     end
+    if self:inputToSubviews(keys) then
+        return true
+    end
     for _,choice in ipairs(self.subviews.list:getVisibleChoices()) do
         if choice.panel and choice.panel:onInput(keys) then
             return true
         end
     end
-    return self:inputToSubviews(keys)
 end
 
 function OverlayConfig:onRenderFrame(dc, rect)

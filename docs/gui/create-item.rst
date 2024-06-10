@@ -3,15 +3,16 @@ gui/create-item
 
 .. dfhack-tool::
     :summary: Summon items from the aether.
-    :tags: fort armok items
+    :tags: adventure fort armok items
 
 This tool provides a graphical interface for creating items of your choice. It
 walks you through the creation process with a series of prompts, asking you
 for the type of item, the material, the quality, and the quantity.
 
 If a unit is selected, that unit will be designated the creator of the summoned
-items. The items will appear at that unit's feet. If no unit is selected, the
-first citizen unit will be used as the creator.
+items. Any item with a "sized for" property, like armor, will be created for
+that unit's race, and the items will appear at that unit's feet. If no unit is
+selected, the first citizen unit will be used as the creator.
 
 Usage
 -----

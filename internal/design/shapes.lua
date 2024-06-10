@@ -1,7 +1,9 @@
 -- shape definitions for gui/dig
 --@ module = true
 
-local Point = reqscript("internal/design/util").Point
+local util = reqscript("internal/design/util")
+
+local Point = util.Point
 
 if not dfhack_flags.module then
     qerror("this script cannot be called directly")
@@ -213,6 +215,8 @@ end
 Ellipse = defclass(Ellipse, Shape)
 Ellipse.ATTRS {
     name = "Ellipse",
+    texture_offset = 5,
+    button_chars = util.make_ascii_button(9, 248)
 }
 
 function Ellipse:init()
@@ -224,7 +228,7 @@ function Ellipse:init()
             key = "CUSTOM_H",
         },
         thickness = {
-            name = "Thickness",
+            name = "Line thickness",
             type = "plusminus",
             value = 2,
             enabled = { "hollow", true },
@@ -276,6 +280,8 @@ end
 Rectangle = defclass(Rectangle, Shape)
 Rectangle.ATTRS {
     name = "Rectangle",
+    texture_offset = 1,
+    button_chars = util.make_ascii_button(222, 221)
 }
 
 function Rectangle:init()
@@ -287,7 +293,7 @@ function Rectangle:init()
             key = "CUSTOM_H",
         },
         thickness = {
-            name = "Thickness",
+            name = "Line thickness",
             type = "plusminus",
             value = 2,
             enabled = { "hollow", true },
@@ -322,6 +328,8 @@ end
 Rows = defclass(Rows, Shape)
 Rows.ATTRS {
     name = "Rows",
+    texture_offset = 9,
+    button_chars = util.make_ascii_button(197, 197)
 }
 
 function Rows:init()
@@ -360,6 +368,8 @@ end
 Diag = defclass(Diag, Shape)
 Diag.ATTRS {
     name = "Diagonal",
+    texture_offset = 13,
+    button_chars = util.make_ascii_button('/', '/')
 }
 
 function Diag:init()
@@ -397,14 +407,16 @@ Line = defclass(Line, Shape)
 Line.ATTRS {
     name = "Line",
     extra_points = { { label = "Curve Point" }, { label = "Second Curve Point" } },
-    invertable = false, -- Doesn't support invert
-    basic_shape = false -- Driven by points, not rectangle bounds
+    invertable = false,  -- Doesn't support invert
+    basic_shape = false, -- Driven by points, not rectangle bounds
+    texture_offset = 17,
+    button_chars = util.make_ascii_button(250, '(')
 }
 
 function Line:init()
     self.options = {
         thickness = {
-            name = "Thickness",
+            name = "Line thickness",
             type = "plusminus",
             value = 1,
             min = 1,
@@ -458,10 +470,19 @@ function Line:plot_bresenham(x0, y0, x1, y1, thickness)
 
 end
 
+local function get_granularity(x0, y0, x1, y1, bezier_point1, bezier_point2)
+    local spread_x = math.max(x0, x1,  bezier_point1.x, bezier_point2 and bezier_point2.x or 0) -
+        math.min(x0, x1,  bezier_point1.x, bezier_point2 and bezier_point2.x or math.huge)
+    local spread_y = math.max(y0, y1,  bezier_point1.y, bezier_point2 and bezier_point2.y or 0) -
+        math.min(y0, y1,  bezier_point1.y, bezier_point2 and bezier_point2.y or math.huge)
+    return 1 / ((spread_x + spread_y) * 10)
+end
+
 function Line:cubic_bezier(x0, y0, x1, y1, bezier_point1, bezier_point2, thickness)
     local t = 0
     local x2, y2 = bezier_point1.x, bezier_point1.y
     local x3, y3 = bezier_point2.x, bezier_point2.y
+    local granularity = get_granularity(x0, y0, x1, y1, bezier_point1, bezier_point2)
     while t <= 1 do
         local x = math.floor(((1 - t) ^ 3 * x0 + 3 * (1 - t) ^ 2 * t * x2 + 3 * (1 - t) * t ^ 2 * x3 + t ^ 3 * x1) +
             0.5)
@@ -476,7 +497,7 @@ function Line:cubic_bezier(x0, y0, x1, y1, bezier_point1, bezier_point2, thickne
                 end
             end
         end
-        t = t + 0.01
+        t = t + granularity
     end
 
     -- Get the last point
@@ -498,6 +519,7 @@ end
 function Line:quadratic_bezier(x0, y0, x1, y1, bezier_point1, thickness)
     local t = 0
     local x2, y2 = bezier_point1.x, bezier_point1.y
+    local granularity = get_granularity(x0, y0, x1, y1, bezier_point1)
     while t <= 1 do
         local x = math.floor(((1 - t) ^ 2 * x0 + 2 * (1 - t) * t * x2 + t ^ 2 * x1) + 0.5)
         local y = math.floor(((1 - t) ^ 2 * y0 + 2 * (1 - t) * t * y2 + t ^ 2 * y1) + 0.5)
@@ -510,7 +532,7 @@ function Line:quadratic_bezier(x0, y0, x1, y1, bezier_point1, thickness)
                 end
             end
         end
-        t = t + 0.01
+        t = t + granularity
     end
 end
 
@@ -551,13 +573,15 @@ FreeForm.ATTRS = {
     min_points = 1,
     max_points = DEFAULT_NIL,
     basic_shape = false,
-    can_mirror = true
+    can_mirror = true,
+    texture_offset = 21,
+    button_chars = util.make_ascii_button('?', '*')
 }
 
 function FreeForm:init()
     self.options = {
         thickness = {
-            name = "Thickness",
+            name = "Line thickness",
             type = "plusminus",
             value = 1,
             min = 1,

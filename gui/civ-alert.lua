@@ -1,8 +1,10 @@
 --@ module=true
 
 local gui = require('gui')
-local widgets = require('gui.widgets')
 local overlay = require('plugins.overlay')
+local textures = require('gui.textures')
+local utils = require('utils')
+local widgets = require('gui.widgets')
 
 local function get_civ_alert()
     local list = df.global.plotinfo.alerts.list
@@ -34,15 +36,25 @@ local function clear_alarm()
     df.global.plotinfo.alerts.civ_alert_idx = 0
 end
 
+function add_civalert_burrow(id)
+    local burrows = get_civ_alert().burrows
+    utils.insert_sorted(burrows, id)
+end
+
+function remove_civalert_burrow(id)
+    local burrows = get_civ_alert().burrows
+    utils.erase_sorted(burrows, id)
+    if #burrows == 0 then
+        clear_alarm()
+    end
+end
+
 local function toggle_civalert_burrow(id)
     local burrows = get_civ_alert().burrows
-    if #burrows == 0 then
-        burrows:insert('#', id)
-    elseif burrows[0] == id then
-        burrows:resize(0)
-        clear_alarm()
+    if utils.binsearch(burrows, id) then
+        remove_civalert_burrow(id)
     else
-        burrows[0] = id
+        add_civalert_burrow(id)
     end
 end
 
@@ -65,24 +77,28 @@ function BigRedButton:init()
 
     self:addviews{
         widgets.Label{
-            text={
-                ' Activate ', NEWLINE,
-                ' civilian ', NEWLINE,
-                '  alert   ',
+            text=widgets.makeButtonLabelText{
+                chars={
+                    ' Activate ',
+                    ' civilian ',
+                    '  alert   ',
+                },
+                pens=BUTTON_TEXT_ON,
+                pens_hover=BUTTON_TEXT_OFF,
             },
-            text_pen=BUTTON_TEXT_ON,
-            text_hpen=BUTTON_TEXT_OFF,
             visible=can_sound_alarm,
             on_click=sound_alarm,
         },
         widgets.Label{
-            text={
-                '  Clear   ', NEWLINE,
-                ' civilian ', NEWLINE,
-                '  alert   ',
+            text=widgets.makeButtonLabelText{
+                chars={
+                    '  Clear   ',
+                    ' civilian ',
+                    '  alert   ',
+                },
+                pens=BUTTON_TEXT_OFF,
+                pens_hover=BUTTON_TEXT_ON,
             },
-            text_pen=BUTTON_TEXT_OFF,
-            text_hpen=BUTTON_TEXT_ON,
             visible=can_clear_alarm,
             on_click=clear_alarm,
         },
@@ -95,6 +111,7 @@ end
 
 CivalertOverlay = defclass(CivalertOverlay, overlay.OverlayWidget)
 CivalertOverlay.ATTRS{
+    desc='Adds a button for activating a civilian alert when the squads panel is open.',
     default_pos={x=-15,y=-1},
     default_enabled=true,
     viewscreens='dwarfmode',
@@ -118,18 +135,13 @@ end
 last_tp_start = last_tp_start or 0
 CONFIG_BUTTON_PENS = CONFIG_BUTTON_PENS or {}
 local function get_button_pen(idx)
-    local start = dfhack.textures.getControlPanelTexposStart()
+    local start = textures.tp_control_panel(1)
     if last_tp_start == start then return CONFIG_BUTTON_PENS[idx] end
     last_tp_start = start
 
-    local tp = function(offset)
-        if start == -1 then return nil end
-        return start + offset
-    end
-
-    CONFIG_BUTTON_PENS[1] = to_pen{fg=COLOR_CYAN, tile=tp(6), ch=string.byte('[')}
-    CONFIG_BUTTON_PENS[2] = to_pen{tile=tp(9), ch=15} -- gear/masterwork symbol
-    CONFIG_BUTTON_PENS[3] = to_pen{fg=COLOR_CYAN, tile=tp(7), ch=string.byte(']')}
+    CONFIG_BUTTON_PENS[1] = to_pen{fg=COLOR_CYAN, tile=curry(textures.tp_control_panel, 7), ch=string.byte('[')}
+    CONFIG_BUTTON_PENS[2] = to_pen{tile=curry(textures.tp_control_panel, 10), ch=15} -- gear/masterwork symbol
+    CONFIG_BUTTON_PENS[3] = to_pen{fg=COLOR_CYAN, tile=curry(textures.tp_control_panel, 8), ch=string.byte(']')}
 
     return CONFIG_BUTTON_PENS[idx]
 end
@@ -198,7 +210,7 @@ function Civalert:init()
             subviews={
                 widgets.WrappedLabel{
                     frame={t=0, r=0, h=2},
-                    text_to_wrap='Choose a burrow where you want your civilians to hide during danger.',
+                    text_to_wrap='Choose the burrow(s) where you want your civilians to hide during danger.',
                 },
                 widgets.HotkeyLabel{
                     frame={t=3, l=0},
@@ -244,8 +256,7 @@ local SELECTED_ICON = to_pen{ch=string.char(251), fg=COLOR_LIGHTGREEN}
 
 function Civalert:get_burrow_icon(id)
     local burrows = get_civ_alert().burrows
-    if #burrows == 0 or burrows[0] ~= id then return nil end
-    return SELECTED_ICON
+    return utils.binsearch(burrows, id) and SELECTED_ICON or nil
 end
 
 function Civalert:get_burrow_choices()

@@ -3,7 +3,7 @@ deteriorate
 
 .. dfhack-tool::
     :summary: Cause corpses, clothes, and/or food to rot away over time.
-    :tags: unavailable fort auto fps gameplay items plants
+    :tags: unavailable
 
 When enabled, this script will cause the specified item types to slowly rot
 away. By default, items disappear after a few months, but you can choose to slow

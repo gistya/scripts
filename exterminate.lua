@@ -1,3 +1,5 @@
+--@module = true
+
 local argparse = require('argparse')
 
 local function spawnLiquid(position, liquid_level, liquid_type, update_liquids)
@@ -20,23 +22,23 @@ local function checkUnit(unit)
 end
 
 local function isUnitFriendly(unit)
-    return dfhack.units.isCitizen(unit) or
-        dfhack.units.isOwnCiv(unit) or
+    if dfhack.units.isDanger(unit) then
+        return false
+    end
+    return dfhack.units.isOwnCiv(unit) or
         dfhack.units.isOwnGroup(unit) or
         dfhack.units.isVisiting(unit) or
         dfhack.units.isTame(unit) or
-        dfhack.units.isDomesticated(unit) or
-        dfhack.units.isVisitor(unit) or
-        dfhack.units.isDiplomat(unit) or
-        dfhack.units.isMerchant(unit)
+        dfhack.units.isDomesticated(unit)
 end
 
-local killMethod = {
+killMethod = {
     INSTANT = 0,
     BUTCHER = 1,
     MAGMA = 2,
     DROWN = 3,
     VAPORIZE = 4,
+    DISINTEGRATE = 5,
 }
 
 -- removes the unit from existence, leaving no corpse if the unit hasn't died
@@ -76,7 +78,28 @@ local function drownUnit(unit, liquid_type)
     createLiquid()
 end
 
-local function killUnit(unit, method)
+local function destroyItem(item)
+    item.flags.garbage_collect = true
+    item.flags.forbid = true
+    item.flags.hidden = true
+end
+
+local function destroyContainedItems(container)
+    for _, item in ipairs(dfhack.items.getContainedItems(container)) do
+        destroyContainedItems(item)
+        destroyItem(item)
+    end
+end
+
+local function destroyInventory(unit)
+    for _, inv_item in ipairs(unit.inventory) do
+        local item = inv_item.item
+        destroyContainedItems(item)
+        destroyItem(item)
+    end
+end
+
+function killUnit(unit, method)
     if method == killMethod.BUTCHER then
         butcherUnit(unit)
     elseif method == killMethod.MAGMA then
@@ -85,6 +108,9 @@ local function killUnit(unit, method)
         drownUnit(unit, df.tile_liquid.Water)
     elseif method == killMethod.VAPORIZE then
         vaporizeUnit(unit)
+    elseif method == killMethod.DISINTEGRATE then
+        vaporizeUnit(unit)
+        destroyInventory(unit)
     else
         destroyUnit(unit)
     end
@@ -119,6 +145,10 @@ local function getMapRaces(only_visible, include_friendly)
     end
 
     return map_races
+end
+
+if dfhack_flags.module then
+    return
 end
 
 local options, args = {
@@ -170,8 +200,10 @@ if not positionals[1] then
     return
 end
 
-local count = 0
-if positionals[1]:lower() == 'undead' then
+local count, target = 0, 'creature(s)'
+local race_name = table.concat(positionals, ' ')
+if race_name:lower() == 'undead' then
+    target = 'undead'
     if not map_races.UNDEAD then
         qerror("No undead found on the map.")
     end
@@ -182,22 +214,37 @@ if positionals[1]:lower() == 'undead' then
         end
     end
 else
-    local selected_race, selected_caste = positionals[1], nil
+    local selected_race, selected_caste = race_name, nil
 
     if string.find(selected_race, ':') then
-        local tokens = positionals[1]:split(':')
+        local tokens = selected_race:split(':')
         selected_race, selected_caste = tokens[1], tokens[2]
     end
 
     if not map_races[selected_race] then
-        qerror("No creatures of this race on the map.")
+        local selected_race_upper = selected_race:upper()
+        local selected_race_under = selected_race_upper:gsub(' ', '_')
+        if map_races[selected_race_upper] then
+            selected_race = selected_race_upper
+        elseif map_races[selected_race_under] then
+            selected_race = selected_race_under
+        else
+            qerror("No creatures of this race on the map.")
+        end
     end
 
     local race_castes = getRaceCastes(map_races[selected_race].id)
 
     if selected_caste and not race_castes[selected_caste] then
-        qerror("Invalid caste.")
+        local selected_caste_upper = selected_caste:upper()
+        if race_castes[selected_caste_upper] then
+            selected_caste = selected_caste_upper
+        else
+            qerror("Invalid caste: " .. selected_caste)
+        end
     end
+
+    target = selected_race
 
     for _, unit in pairs(df.global.world.units.active) do
         if not checkUnit(unit) then
@@ -222,4 +269,4 @@ else
     end
 end
 
-print(([[Exterminated %d creatures.]]):format(count))
+print(([[Exterminated %d %s.]]):format(count, target))

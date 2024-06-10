@@ -3,6 +3,7 @@
 local common = reqscript('internal/caravan/common')
 local gui = require('gui')
 local overlay = require('plugins.overlay')
+local predicates = reqscript('internal/caravan/predicates')
 local utils = require('utils')
 local widgets = require('gui.widgets')
 
@@ -13,15 +14,16 @@ local widgets = require('gui.widgets')
 MoveGoods = defclass(MoveGoods, widgets.Window)
 MoveGoods.ATTRS {
     frame_title='Move goods to/from depot',
-    frame={w=84, h=46},
+    frame={w=85, h=46},
     resizable=true,
     resize_min={h=35},
+    frame_inset={l=1, t=1, b=1, r=0},
     pending_item_ids=DEFAULT_NIL,
     depot=DEFAULT_NIL,
 }
 
-local STATUS_COL_WIDTH = 7
-local VALUE_COL_WIDTH = 6
+local DIST_COL_WIDTH = 7
+local VALUE_COL_WIDTH = 9
 local QTY_COL_WIDTH = 5
 
 local function sort_noop(a, b)
@@ -63,20 +65,36 @@ local function sort_by_value_asc(a, b)
     return a.data[value_field] < b.data[value_field]
 end
 
-local function sort_by_status_desc(a, b)
+local function sort_by_dist_desc(a, b)
     local a_unselected = a.data.selected == 0 or (a.item_id and not a.data.items[a.item_id].pending)
     local b_unselected = b.data.selected == 0 or (b.item_id and not b.data.items[b.item_id].pending)
     if a_unselected == b_unselected then
-        return sort_by_value_desc(a, b)
+        local a_at_depot = a.data.num_at_depot == a.data.quantity
+        local b_at_depot = b.data.num_at_depot == b.data.quantity
+        if a_at_depot ~= b_at_depot then
+            return a_at_depot
+        end
+        if a.data.dist == b.data.dist then
+            return sort_by_value_desc(a, b)
+        end
+        return a.data.dist < b.data.dist
     end
     return not a_unselected
 end
 
-local function sort_by_status_asc(a, b)
+local function sort_by_dist_asc(a, b)
     local a_unselected = a.data.selected == 0 or (a.item_id and not a.data.items[a.item_id].pending)
     local b_unselected = b.data.selected == 0 or (b.item_id and not b.data.items[b.item_id].pending)
     if a_unselected == b_unselected then
-        return sort_by_value_desc(a, b)
+        local a_at_depot = a.data.num_at_depot == a.data.quantity
+        local b_at_depot = b.data.num_at_depot == b.data.quantity
+        if a_at_depot ~= b_at_depot then
+            return b_at_depot
+        end
+        if a.data.dist == b.data.dist then
+            return sort_by_value_desc(a, b)
+        end
+        return a.data.dist > b.data.dist
     end
     return not b_unselected
 end
@@ -130,6 +148,9 @@ function MoveGoods:init()
     self.animal_ethics, self.wood_ethics = get_ethics_restrictions()
     self.banned_items = common.get_banned_items()
     self.risky_items = common.get_risky_items(self.banned_items)
+    self.choices_cache = {}
+
+    self.predicate_context = {name='movegoods'}
 
     self:addviews{
         widgets.CycleHotkeyLabel{
@@ -138,8 +159,8 @@ function MoveGoods:init()
             label='Sort by:',
             key='CUSTOM_SHIFT_S',
             options={
-                {label='status'..common.CH_DN, value=sort_by_status_desc},
-                {label='status'..common.CH_UP, value=sort_by_status_asc},
+                {label='dist'..common.CH_DN, value=sort_by_dist_desc},
+                {label='dist'..common.CH_UP, value=sort_by_dist_asc},
                 {label='value'..common.CH_DN, value=sort_by_value_desc},
                 {label='value'..common.CH_UP, value=sort_by_value_asc},
                 {label='qty'..common.CH_DN, value=sort_by_quantity_desc},
@@ -147,7 +168,7 @@ function MoveGoods:init()
                 {label='name'..common.CH_DN, value=sort_by_name_desc},
                 {label='name'..common.CH_UP, value=sort_by_name_asc},
             },
-            initial_option=sort_by_status_desc,
+            initial_option=sort_by_dist_desc,
             on_change=self:callback('refresh_list', 'sort'),
         },
         widgets.EditField{
@@ -173,27 +194,27 @@ function MoveGoods:init()
             on_change=function() self:refresh_list() end,
         },
         widgets.Panel{
-            frame={t=4, l=40, r=0, h=12},
-            subviews=common.get_info_widgets(self, get_export_agreements()),
+            frame={t=4, l=40, r=1, h=12},
+            subviews=common.get_info_widgets(self, get_export_agreements(), self.predicate_context),
         },
         widgets.Panel{
             frame={t=17, l=0, r=0, b=6},
             subviews={
                 widgets.CycleHotkeyLabel{
-                    view_id='sort_status',
-                    frame={t=0, l=STATUS_COL_WIDTH+1-7, w=7},
+                    view_id='sort_dist',
+                    frame={t=0, l=DIST_COL_WIDTH+1-7, w=7},
                     options={
-                        {label='status', value=sort_noop},
-                        {label='status'..common.CH_DN, value=sort_by_status_desc},
-                        {label='status'..common.CH_UP, value=sort_by_status_asc},
+                        {label='dist', value=sort_noop},
+                        {label='dist'..common.CH_DN, value=sort_by_dist_desc},
+                        {label='dist'..common.CH_UP, value=sort_by_dist_asc},
                     },
-                    initial_option=sort_by_status_desc,
+                    initial_option=sort_by_dist_desc,
                     option_gap=0,
-                    on_change=self:callback('refresh_list', 'sort_status'),
+                    on_change=self:callback('refresh_list', 'sort_dist'),
                 },
                 widgets.CycleHotkeyLabel{
                     view_id='sort_value',
-                    frame={t=0, l=STATUS_COL_WIDTH+2+VALUE_COL_WIDTH+1-6, w=6},
+                    frame={t=0, l=DIST_COL_WIDTH+2+VALUE_COL_WIDTH+1-6, w=6},
                     options={
                         {label='value', value=sort_noop},
                         {label='value'..common.CH_DN, value=sort_by_value_desc},
@@ -204,7 +225,7 @@ function MoveGoods:init()
                 },
                 widgets.CycleHotkeyLabel{
                     view_id='sort_quantity',
-                    frame={t=0, l=STATUS_COL_WIDTH+2+VALUE_COL_WIDTH+2+QTY_COL_WIDTH+1-4, w=4},
+                    frame={t=0, l=DIST_COL_WIDTH+2+VALUE_COL_WIDTH+2+QTY_COL_WIDTH+1-4, w=4},
                     options={
                         {label='qty', value=sort_noop},
                         {label='qty'..common.CH_DN, value=sort_by_quantity_desc},
@@ -215,7 +236,7 @@ function MoveGoods:init()
                 },
                 widgets.CycleHotkeyLabel{
                     view_id='sort_name',
-                    frame={t=0, l=STATUS_COL_WIDTH+2+VALUE_COL_WIDTH+2+QTY_COL_WIDTH+2, w=5},
+                    frame={t=0, l=DIST_COL_WIDTH+2+VALUE_COL_WIDTH+2+QTY_COL_WIDTH+2, w=5},
                     options={
                         {label='name', value=sort_noop},
                         {label='name'..common.CH_DN, value=sort_by_name_desc},
@@ -237,7 +258,7 @@ function MoveGoods:init()
         widgets.Label{
             frame={l=0, b=4, h=1, r=0},
             text={
-                'Total value of trade items:',
+                'Total value of items marked for trade:',
                 {gap=1,
                  text=function() return common.obfuscate_value(self.value_pending) end},
             },
@@ -250,9 +271,21 @@ function MoveGoods:init()
             auto_width=true,
         },
         widgets.ToggleHotkeyLabel{
-            view_id='disable_buckets',
-            frame={l=26, b=2},
-            label='Show individual items:',
+            view_id='group_items',
+            frame={l=25, b=2, w=24},
+            label='Group items:',
+            key='CUSTOM_CTRL_G',
+            options={
+                {label='Yes', value=true, pen=COLOR_GREEN},
+                {label='No', value=false}
+            },
+            initial_option=true,
+            on_change=function() self:refresh_list() end,
+        },
+        widgets.ToggleHotkeyLabel{
+            view_id='inside_containers',
+            frame={l=51, b=2, w=30},
+            label='Inside containers:',
             key='CUSTOM_CTRL_I',
             options={
                 {label='Yes', value=true, pen=COLOR_GREEN},
@@ -283,7 +316,7 @@ function MoveGoods:refresh_list(sort_widget, sort_fn)
         self.subviews[sort_widget]:cycle()
         return
     end
-    for _,widget_name in ipairs{'sort', 'sort_status', 'sort_value', 'sort_quantity', 'sort_name'} do
+    for _,widget_name in ipairs{'sort', 'sort_dist', 'sort_value', 'sort_quantity', 'sort_name'} do
         self.subviews[widget_name]:setOption(sort_fn)
     end
     local list = self.subviews.list
@@ -293,23 +326,34 @@ function MoveGoods:refresh_list(sort_widget, sort_fn)
     list:setFilter(saved_filter)
 end
 
+local function is_container(item)
+    return item and (
+        df.item_binst:is_instance(item) or
+        item:isFoodStorage()
+    )
+end
+
 local function is_tradeable_item(item, depot)
     if item.flags.hostile or
-        item.flags.in_inventory or
         item.flags.removed or
         item.flags.dead_dwarf or
         item.flags.spider_web or
         item.flags.construction or
         item.flags.encased or
-        item.flags.unk12 or
         item.flags.murder or
         item.flags.trader or
         item.flags.owned or
         item.flags.garbage_collect or
-        item.flags.on_fire or
-        item.flags.in_chest
+        item.flags.on_fire
     then
         return false
+    end
+    if item.flags.in_inventory then
+        local gref = dfhack.items.getGeneralRef(item, df.general_ref_type.CONTAINED_IN_ITEM)
+        if not gref then return false end
+        if not is_container(gref:getItem()) or item:isLiquidPowder() then
+            return false
+        end
     end
     if item.flags.in_job then
         local spec_ref = dfhack.items.getSpecificRef(item, df.specific_ref_type.JOB)
@@ -319,7 +363,7 @@ local function is_tradeable_item(item, depot)
     if item.flags.in_building then
         if dfhack.items.getHolderBuilding(item) ~= depot then return false end
         for _, contained_item in ipairs(depot.contained_items) do
-            if contained_item.use_mode == 0 then return true end
+            if contained_item.use_mode == df.building_item_role_type.TEMP then return true end
             -- building construction materials
             if item == contained_item.item then return false end
         end
@@ -337,9 +381,9 @@ local function get_entry_icon(data, item_id)
     return common.SOME_PEN
 end
 
-local function make_choice_text(at_depot, value, quantity, desc)
+local function make_choice_text(at_depot, dist, value, quantity, desc)
     return {
-        {width=STATUS_COL_WIDTH-2, text=at_depot and 'depot' or ''},
+        {width=DIST_COL_WIDTH-2, rjustify=true, text=at_depot and 'depot' or tostring(dist)},
         {gap=2, width=VALUE_COL_WIDTH, rjustify=true, text=common.obfuscate_value(value)},
         {gap=2, width=QTY_COL_WIDTH, rjustify=true, text=quantity},
         {gap=2, text=desc},
@@ -383,33 +427,70 @@ local function is_ethical_product(item, animal_ethics, wood_ethics)
         (not wood_ethics or not common.has_wood(item))
 end
 
-function MoveGoods:cache_choices(disable_buckets)
-    if self.choices then return self.choices[disable_buckets] end
+local function make_container_search_key(item, desc)
+    local words = {}
+    common.add_words(words, desc)
+    for _, contained_item in ipairs(dfhack.items.getContainedItems(item)) do
+        common.add_words(words, dfhack.items.getReadableDescription(contained_item))
+    end
+    return table.concat(words, ' ')
+end
+
+local function get_cache_index(group_items, inside_containers)
+    local val = 1
+    if group_items then val = val + 1 end
+    if inside_containers then val = val + 2 end
+    return val
+end
+
+local function contains_non_liquid_powder(container)
+    for _, item in ipairs(dfhack.items.getContainedItems(container)) do
+        if not item:isLiquidPowder() then return true end
+    end
+    return false
+end
+
+local function get_distance(bld, pos)
+    return math.max(math.abs(bld.centerx - pos.x), math.abs(bld.centery - pos.y)) + math.abs(bld.z - pos.z)
+end
+
+function MoveGoods:cache_choices()
+    local group_items = self.subviews.group_items:getOptionValue()
+    local inside_containers = self.subviews.inside_containers:getOptionValue()
+    local cache_idx = get_cache_index(group_items, inside_containers)
+    if self.choices_cache[cache_idx] then return self.choices_cache[cache_idx] end
 
     local pending = self.pending_item_ids
-    local buckets = {}
-    for _, item in ipairs(df.global.world.items.all) do
-        local item_id = item.id
+    local groups = {}
+    for _, item in ipairs(df.global.world.items.other.IN_PLAY) do
         if not item or not is_tradeable_item(item, self.depot) then goto continue end
+        if inside_containers and is_container(item) and contains_non_liquid_powder(item) then
+            goto continue
+        elseif not inside_containers and item.flags.in_inventory then
+            goto continue
+        end
+        local item_id = item.id
         local value = common.get_perceived_value(item)
         if value <= 0 then goto continue end
+        local dist = get_distance(self.depot, xyz2pos(dfhack.items.getPosition(item)))
         local is_pending = not not pending[item_id] or item.flags.in_building
         local is_forbidden = item.flags.forbid
         local is_banned, is_risky = common.scan_banned(item, self.risky_items)
         local is_requested = dfhack.items.isRequestedTradeGood(item)
         local wear_level = item:getWear()
-        local desc = common.get_item_description(item)
+        local desc = dfhack.items.getReadableDescription(item)
         local key = ('%s/%d'):format(desc, value)
-        if buckets[key] then
-            local bucket = buckets[key]
-            bucket.data.items[item_id] = {item=item, pending=is_pending, banned=is_banned, requested=is_requested}
-            bucket.data.quantity = bucket.data.quantity + 1
-            bucket.data.selected = bucket.data.selected + (is_pending and 1 or 0)
-            bucket.data.num_at_depot = bucket.data.num_at_depot + (item.flags.in_building and 1 or 0)
-            bucket.data.has_forbidden = bucket.data.has_forbidden or is_forbidden
-            bucket.data.has_banned = bucket.data.has_banned or is_banned
-            bucket.data.has_risky = bucket.data.has_risky or is_risky
-            bucket.data.has_requested = bucket.data.has_requested or is_requested
+        if groups[key] then
+            local group = groups[key]
+            group.data.items[item_id] = {item=item, pending=is_pending, banned=is_banned, requested=is_requested}
+            group.data.quantity = group.data.quantity + 1
+            group.data.dist = math.min(group.data.dist or math.huge, dist)
+            group.data.selected = group.data.selected + (is_pending and 1 or 0)
+            group.data.num_at_depot = group.data.num_at_depot + (item.flags.in_building and 1 or 0)
+            group.data.has_forbidden = group.data.has_forbidden or is_forbidden
+            group.data.has_banned = group.data.has_banned or is_banned
+            group.data.has_risky = group.data.has_risky or is_risky
+            group.data.has_requested = group.data.has_requested or is_requested
         else
             local is_ethical = is_ethical_product(item, self.animal_ethics, self.wood_ethics)
             local data = {
@@ -421,6 +502,7 @@ function MoveGoods:cache_choices(disable_buckets)
                 item_subtype=item:getSubtype(),
                 quantity=1,
                 quality=item.flags.artifact and 6 or item:getQuality(),
+                dist=dist,
                 wear=wear_level,
                 selected=is_pending and 1 or 0,
                 num_at_depot=item.flags.in_building and 1 or 0,
@@ -431,40 +513,46 @@ function MoveGoods:cache_choices(disable_buckets)
                 ethical=is_ethical,
                 dirty=false,
             }
+            local search_key
+            if not inside_containers and is_container(item) then
+                search_key = make_container_search_key(item, desc)
+            else
+                search_key = common.make_search_key(desc)
+            end
             local entry = {
-                search_key=common.make_search_key(desc),
+                search_key=search_key,
                 icon=curry(get_entry_icon, data),
                 data=data,
             }
-            buckets[key] = entry
+            groups[key] = entry
         end
         ::continue::
     end
 
-    local bucket_choices, nobucket_choices = {}, {}
-    for _, bucket in pairs(buckets) do
-        local data = bucket.data
+    local group_choices, nogroup_choices = {}, {}
+    for _, group in pairs(groups) do
+        local data = group.data
         for item_id, item_data in pairs(data.items) do
-            local nobucket_choice = copyall(bucket)
-            nobucket_choice.icon = curry(get_entry_icon, data, item_id)
-            nobucket_choice.text = make_choice_text(item_data.item.flags.in_building, data.per_item_value, 1, data.desc)
-            nobucket_choice.item_id = item_id
-            table.insert(nobucket_choices, nobucket_choice)
+            local nogroup_choice = copyall(group)
+            nogroup_choice.icon = curry(get_entry_icon, data, item_id)
+            nogroup_choice.text = make_choice_text(item_data.item.flags.in_building,
+                data.dist, data.per_item_value, 1, data.desc)
+            nogroup_choice.item_id = item_id
+            table.insert(nogroup_choices, nogroup_choice)
         end
         data.total_value = data.per_item_value * data.quantity
-        bucket.text = make_choice_text(data.num_at_depot == data.quantity, data.total_value, data.quantity, data.desc)
-        table.insert(bucket_choices, bucket)
+        group.text = make_choice_text(data.num_at_depot == data.quantity, data.dist, data.total_value, data.quantity, data.desc)
+        table.insert(group_choices, group)
         self.value_pending = self.value_pending + (data.per_item_value * data.selected)
     end
 
-    self.choices = {}
-    self.choices[false] = bucket_choices
-    self.choices[true] = nobucket_choices
-    return self:cache_choices(disable_buckets)
+    self.choices_cache[get_cache_index(true, inside_containers)] = group_choices
+    self.choices_cache[get_cache_index(false, inside_containers)] = nogroup_choices
+    return self.choices_cache[cache_idx]
 end
 
 function MoveGoods:get_choices()
-    local raw_choices = self:cache_choices(self.subviews.disable_buckets:getOptionValue())
+    local raw_choices = self:cache_choices()
     local choices = {}
     local include_forbidden = not self.subviews.hide_forbidden:getOptionValue()
     local banned = self.subviews.banned:getOptionValue()
@@ -514,6 +602,9 @@ function MoveGoods:get_choices()
             elseif data.has_banned or (banned ~= 'banned_only' and data.has_risky) then
                 goto continue
             end
+        end
+        if not predicates.pass_predicates(self.predicate_context, data.item) then
+            goto continue
         end
         table.insert(choices, choice)
         ::continue::
@@ -605,6 +696,7 @@ function MoveGoodsModal:init()
     self.depot = self.depot or dfhack.gui.getSelectedBuilding(true)
     self:addviews{
         MoveGoods{
+            view_id='move_goods',
             pending_item_ids=self.pending_item_ids,
             depot=self.depot,
         },
@@ -616,7 +708,7 @@ function MoveGoodsModal:onDismiss()
     local depot = self.depot
     if not depot then return end
     local pending = self.pending_item_ids
-    for _, choice in ipairs(self.subviews.list:getChoices()) do
+    for _, choice in ipairs(self.subviews.move_goods:cache_choices()) do
         if not choice.data.dirty then goto continue end
         for item_id, item_data in pairs(choice.data.items) do
             local item = item_data.item
@@ -649,6 +741,7 @@ end
 
 MoveGoodsOverlay = defclass(MoveGoodsOverlay, overlay.OverlayWidget)
 MoveGoodsOverlay.ATTRS{
+    desc='Adds link to trade depot building to launch the DFHack trade goods UI.',
     default_pos={x=-64, y=10},
     default_enabled=true,
     viewscreens='dwarfmode/ViewSheets/BUILDING/TradeDepot',
@@ -693,11 +786,29 @@ function MoveGoodsOverlay:init()
 end
 
 -- -------------------
+-- MoveGoodsHiderOverlay
+--
+
+MoveGoodsHiderOverlay = defclass(MoveGoodsHiderOverlay, overlay.OverlayWidget)
+MoveGoodsHiderOverlay.ATTRS{
+    desc='Hides the vanilla trade goods selection button.',
+    default_pos={x=-70, y=12},
+    viewscreens='dwarfmode/ViewSheets/BUILDING/TradeDepot',
+    frame={w=27, h=3},
+    frame_background=gui.CLEAR_PEN,
+}
+
+function MoveGoodsHiderOverlay:onInput(keys)
+    return keys._MOUSE_L and self:getMouseFramePos()
+end
+
+-- -------------------
 -- AssignTradeOverlay
 --
 
 AssignTradeOverlay = defclass(AssignTradeOverlay, overlay.OverlayWidget)
 AssignTradeOverlay.ATTRS{
+    desc='Adds link to the trade goods screen to launch the DFHack trade goods UI.',
     default_pos={x=-41,y=-5},
     default_enabled=true,
     viewscreens='dwarfmode/AssignTrade',

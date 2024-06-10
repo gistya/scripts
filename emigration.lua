@@ -1,11 +1,5 @@
---Allow stressed dwarves to emigrate from the fortress
--- For 34.11 by IndigoFenix; update and cleanup by PeridexisErrant
--- old version:  http://dffd.bay12games.com/file.php?id=8404
 --@module = true
 --@enable = true
-
-local json = require('json')
-local persist = require('persist-table')
 
 local GLOBAL_KEY = 'emigration' -- used for state change hooks and persistence
 
@@ -16,7 +10,7 @@ function isEnabled()
 end
 
 local function persist_state()
-    persist.GlobalTable[GLOBAL_KEY] = json.encode({enabled=enabled})
+    dfhack.persistent.saveSiteData(GLOBAL_KEY, {enabled=enabled})
 end
 
 function desireToStay(unit,method,civ_id)
@@ -54,6 +48,39 @@ function desert(u,method,civ)
     for i = #u.owned_buildings-1, 0, -1 do
         local temp_bld = df.building.find(u.owned_buildings[i].id)
         dfhack.buildings.setOwner(temp_bld, nil)
+    end
+
+    -- remove from workshop profiles
+    for _, bld in ipairs(df.global.world.buildings.other.WORKSHOP_ANY) do
+        for k, v in ipairs(bld.profile.permitted_workers) do
+            if v == u.id then
+                bld.profile.permitted_workers:erase(k)
+                break
+            end
+        end
+    end
+    for _, bld in ipairs(df.global.world.buildings.other.FURNACE_ANY) do
+        for k, v in ipairs(bld.profile.permitted_workers) do
+            if v == u.id then
+                bld.profile.permitted_workers:erase(k)
+                break
+            end
+        end
+    end
+
+    -- disassociate from work details
+    for _, detail in ipairs(df.global.plotinfo.labor_info.work_details) do
+        for k, v in ipairs(detail.assigned_units) do
+            if v == u.id then
+                detail.assigned_units:erase(k)
+                break
+            end
+        end
+    end
+
+    -- unburrow
+    for _, burrow in ipairs(df.global.plotinfo.burrows.list) do
+        dfhack.burrows.setAssignedUnit(burrow, u, false)
     end
 
     -- erase the unit from the fortress entity
@@ -99,6 +126,7 @@ function desert(u,method,civ)
 
         -- try to find a new site for the unit to join
         for k,v in ipairs(df.global.world.entities.all[hf.civ_id].site_links) do
+            local site_id = df.global.plotinfo.site_id
             if v.type == df.entity_site_link_type.Claim and v.target ~= site_id then
                 newsite_id = v.target
                 break
@@ -116,7 +144,7 @@ function desert(u,method,civ)
             df.global.world.history.events:insert("#", {new = df.history_event_change_hf_statest, year = df.global.cur_year, seconds = df.global.cur_year_tick, id = hf_event_id, hfid = hf_id, state = 1, reason = -1, site = newsite_id})
         end
     end
-    print(line)
+    print(dfhack.df2console(line))
     dfhack.gui.showAnnouncement(line, COLOR_WHITE)
 end
 
@@ -133,7 +161,6 @@ function canLeave(unit)
            not unit.flags1.chained and
            dfhack.units.getNoblePositions(unit) == nil and
            unit.military.squad_id == -1 and
-           dfhack.units.isSane(unit) and
            not dfhack.units.isBaby(unit) and
            not dfhack.units.isChild(unit)
 end
@@ -186,8 +213,8 @@ dfhack.onStateChange[GLOBAL_KEY] = function(sc)
         return
     end
 
-    local persisted_data = json.decode(persist.GlobalTable[GLOBAL_KEY] or '')
-    enabled = (persisted_data or {enabled=false})['enabled']
+    local persisted_data = dfhack.persistent.getSiteData(GLOBAL_KEY, {enabled=false})
+    enabled = persisted_data.enabled
     event_loop()
 end
 
@@ -210,6 +237,7 @@ if args[1] == "enable" then
 elseif args[1] == "disable" then
     enabled = false
 else
+    print('emigration is ' .. (enabled and 'enabled' or 'not enabled'))
     return
 end
 

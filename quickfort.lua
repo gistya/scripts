@@ -19,6 +19,7 @@ function refresh_scripts()
     reqscript('internal/quickfort/api')
     reqscript('internal/quickfort/build')
     reqscript('internal/quickfort/building')
+    reqscript('internal/quickfort/burrow')
     reqscript('internal/quickfort/command')
     reqscript('internal/quickfort/common')
     reqscript('internal/quickfort/dig')
@@ -82,6 +83,7 @@ local action_switch = {
     set=quickfort_set.do_set,
     reset=do_reset,
     list=quickfort_list.do_list,
+    delete=quickfort_list.do_delete,
     gui=do_gui,
     run=quickfort_command.do_command,
     orders=quickfort_command.do_command,

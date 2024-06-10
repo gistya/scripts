@@ -1,7 +1,6 @@
 -- GUI for exploring unit syndromes (and their effects).
 
 local gui = require('gui')
-local utils = require('utils')
 local widgets = require('gui.widgets')
 
 local function getEffectTarget(target)
@@ -161,7 +160,7 @@ local EffectFlagDescription = {
         return ("REMOVES: \n%s"):format(table.concat(tags, "  \n"))
     end,
     [df.creature_interaction_effect_type.DISPLAY_TILE] = function(effect)
-        return ("TILE: %s %s"):format(effect.color, effect.tile)
+        return ("TILE: %s (%s, %s, %s)"):format(effect.tile, effect.sym_color[0], effect.sym_color[1], effect.sym_color[2])
     end,
     [df.creature_interaction_effect_type.FLASH_TILE] = function(effect)
         return ("FLASH TILE: %s %s"):format(effect.sym_color[1], effect.sym_color[0])
@@ -241,11 +240,13 @@ local function getSyndromeName(syndrome_raw)
     for _, effect in pairs(syndrome_raw.ce) do
         if df.creature_interaction_effect_body_transformationst:is_instance(effect) then
             is_transformation = true
+        elseif df.creature_interaction_effect_display_namest:is_instance(effect) then
+            return effect.name:gsub("^%l", string.upper)
         end
     end
 
     if syndrome_raw.syn_name ~= "" then
-        syndrome_raw.syn_name:gsub("^%l", string.upper)
+        return syndrome_raw.syn_name:gsub("^%l", string.upper)
     elseif is_transformation then
         return "Body transformation"
     end
@@ -282,7 +283,7 @@ local function getSyndromeDescription(syndrome_raw, syndrome)
         syndrome_duration = ("%s-%s"):format(syndrome_min_duration, syndrome_max_duration)
     end
 
-    return ("%-22s %s%s \n%s effects"):format(
+    return ("%-29s %s%s \n%s effects"):format(
         getSyndromeName(syndrome_raw),
         syndrome and ("%s of "):format(syndrome.ticks) or "",
         syndrome_duration,
@@ -298,18 +299,6 @@ local function getUnitSyndromes(unit)
     end
 
     return unit_syndromes
-end
-
-local function getCitizens()
-    local units = {}
-
-    for _, unit in pairs(df.global.world.units.active) do
-        if dfhack.units.isCitizen(unit) and dfhack.units.isDwarf(unit) then
-            table.insert(units, unit)
-        end
-    end
-
-    return units
 end
 
 local function getLivestock()
@@ -367,7 +356,7 @@ UnitSyndromes.ATTRS {
     frame_title='Unit Syndromes',
     frame={w=50, h=30},
     resizable=true,
-    resize_min={w=43, h=20},
+    resize_min={h=20},
 }
 
 function UnitSyndromes:init()
@@ -382,7 +371,7 @@ function UnitSyndromes:init()
                     view_id = 'category',
                     frame = {t = 0, l = 0},
                     choices = {
-                        { text = "Dwarves", get_choices = getCitizens },
+                        { text = "Citizens and Residents", get_choices = dfhack.units.getCitizens },
                         { text = "Livestock", get_choices = getLivestock },
                         { text = "Wild animals", get_choices = getWildAnimals },
                         { text = "Hostile", get_choices = getHostiles },
@@ -441,14 +430,14 @@ function UnitSyndromes:push_state()
 end
 
 function UnitSyndromes:onInput(keys)
-    if keys._MOUSE_R_DOWN then
+    if keys._MOUSE_R then
         self:previous_page()
         return true
     end
     return UnitSyndromes.super.onInput(self, keys)
 end
 
-function UnitSyndromes:showUnits(index, choice)
+function UnitSyndromes:showUnits(_, choice)
     local choices = {}
 
     if choice.text == "All syndromes" then
@@ -478,9 +467,8 @@ function UnitSyndromes:showUnits(index, choice)
 
         table.insert(choices, {
             unit_id = unit.id,
-            text = ("%s %s \n%s syndromes"):format(
-                string.upper(df.global.world.raws.creatures.all[unit.race].name[0]),
-                dfhack.TranslateName(unit.name),
+            text = ("%s\n%s syndrome(s)"):format(
+                dfhack.units.getReadableName(unit),
                 #unit_syndromes
             ),
         })
@@ -493,7 +481,7 @@ function UnitSyndromes:showUnits(index, choice)
 end
 
 function UnitSyndromes:showUnitSyndromes(index, choice)
-    local unit = utils.binsearch(df.global.world.units.all, choice.unit_id, 'id')
+    local unit = df.unit.find(choice.unit_id)
     local unit_syndromes = getUnitSyndromes(unit)
     local choices = {}
 

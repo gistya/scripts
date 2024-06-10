@@ -2,21 +2,18 @@ adv-rumors
 ==========
 
 .. dfhack-tool::
-    :summary: Improves the rumors menu in adventure mode.
-    :tags: unavailable adventure interface
+    :summary: Improves the conversation menus in Adventure mode.
+    :tags: adventure interface
 
-In adventure mode, start a conversation with someone and then run this tool
-to improve the "Bring up specific incident or rumor" menu. Specifically, this
-tool will:
+When you start a conversation with someone in adventure mode, this tool will:
 
-- Move entries into a single line to improve readability
-- Add a "slew" keyword for filtering, making it easy to find your kills and not
-  your companions'
-- Trim repetitive words from the text
+- Make conversation topics searchable by additional useful keywords based on the topic description
+- Add ``slay`` and ``kill`` keywords for topics about someone who was slain
 
-Usage
------
+Overlay
+-------
 
-::
-
-    adv-rumors
+This script functions via an overlay that is managed by the `gui/overlay` framework.
+When the ``adv-rumors.conversation`` overlay is enabled, the script will
+automatically run on the convesration screen,
+introducing additional keywords.

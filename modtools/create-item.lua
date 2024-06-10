@@ -53,7 +53,8 @@ local function moveToContainer(item, creator, container_type)
         end
     end
     local bucketType = dfhack.items.findType(container_type .. ':NONE')
-    local bucket = df.item.find(dfhack.items.createItem(bucketType, -1, containerMat.type, containerMat.index, creator))
+    local buckets = dfhack.items.createItem(creator, bucketType, -1, containerMat.type, containerMat.index)
+    local bucket = buckets[1]
     dfhack.items.moveToContainer(item, bucket)
     return bucket
 end
@@ -118,8 +119,8 @@ local function createCorpsePiece(creator, bodypart, partlayer, creatureID, caste
     local itemSubtype = dfhack.items.findSubtype(item_type .. ':NONE')
     local material = 'CREATURE_MAT:' .. raceName .. ':' .. layerMat
     local materialInfo = dfhack.matinfo.find(material)
-    local item_id = dfhack.items.createItem(itemType, itemSubtype, materialInfo['type'], materialInfo.index, creator)
-    local item = df.item.find(item_id)
+    local items = dfhack.items.createItem(creator, itemType, itemSubtype, materialInfo['type'], materialInfo.index)
+    local item = items[1]
     -- if the item type is a corpsepiece, we know we have one, and then go on to set the appropriate flags
     if item_type == 'CORPSEPIECE' then
         if layerName == 'BONE' then -- check if bones
@@ -140,8 +141,8 @@ local function createCorpsePiece(creator, bodypart, partlayer, creatureID, caste
             item.corpse_flags.tooth = true
             item.material_amount.Tooth = 1
         elseif layerName == 'NERVE' then    -- check if nervous tissue
-            item.corpse_flags.skull1 = true -- apparently "skull1" is supposed to be named "rots/can_rot"
-            item.corpse_flags.separated_part = true
+            item.corpse_flags.rottable = true
+            item.corpse_flags.use_blood_color = true
             -- elseif layerName == "NAIL" then -- check if nail (NO SPECIAL FLAGS)
         elseif layerName == 'HORN' or layerName == 'HOOF' then -- check if nail
             item.corpse_flags.horn = true
@@ -152,7 +153,7 @@ local function createCorpsePiece(creator, bodypart, partlayer, creatureID, caste
         end
         -- checking for skull
         if not generic and not isCorpse and creatorBody.body_parts[bodypart].token == 'SKULL' then
-            item.corpse_flags.skull2 = true
+            item.corpse_flags.skull = true
         end
     end
     local matType
@@ -175,10 +176,10 @@ local function createCorpsePiece(creator, bodypart, partlayer, creatureID, caste
         end
         -- on a dwarf tissue index 3 (bone) is 22, but this is not always the case for all creatures, so we get the mat_type of index 3 instead
         -- here we also set the actual referenced creature material of the corpsepiece
-        item.bone1.mat_type = matType
-        item.bone1.mat_index = creatureID
-        item.bone2.mat_type = matType
-        item.bone2.mat_index = creatureID
+        item.largest_tissue.mat_type = matType
+        item.largest_tissue.mat_index = creatureID
+        item.largest_unrottable_tissue.mat_type = matType
+        item.largest_unrottable_tissue.mat_index = creatureID
         -- skin (and presumably other parts) use body part modifiers for size or amount
         for i = 0,200 do                          -- fuck it this works
             -- inserts
@@ -225,7 +226,7 @@ local function createCorpsePiece(creator, bodypart, partlayer, creatureID, caste
         if wholePart then
             for i in pairs(creatorBody.body_parts[bodypart].layers) do
                 item.body.components.layer_status[creatorBody.body_parts[bodypart].layers[i].layer_id].gone = false
-                item.corpse_flags.separated_part = true
+                item.corpse_flags.use_blood_color = true
                 item.corpse_flags.unbutchered = true
             end
         end
@@ -239,51 +240,68 @@ local function createCorpsePiece(creator, bodypart, partlayer, creatureID, caste
 end
 
 local function createItem(mat, itemType, quality, creator, description, amount)
-    local item = df.item.find(dfhack.items.createItem(itemType[1], itemType[2], mat[1], mat[2], creator))
-    local item2 = nil
-    assert(item, 'failed to create item')
+    -- The "reaction-gloves" tweak can cause this to create multiple gloves
+    local items = dfhack.items.createItem(creator, itemType[1], itemType[2], mat[1], mat[2])
+    assert(#items > 0, ('failed to create item: item_type: %s, item_subtype: %s, mat_type: %s, mat_index: %s, unit: %s'):format(itemType[1], itemType[2], mat[1], mat[2], creator and creator.id or 'nil'))
+    local item = items[1]
     local mat_token = dfhack.matinfo.decode(item):getToken()
     quality = math.max(0, math.min(5, quality - 1))
-    item:setQuality(quality)
+    -- If we got multiple gloves, set quality on all of them
+    for _, it in pairs(items) do
+        it:setQuality(quality)
+    end
     local item_type = df.item_type[itemType[1]]
     if item_type == 'SLAB' then
         item.description = description
     elseif item_type == 'GLOVES' then
-        --create matching gloves
-        item:setGloveHandedness(1)
-        item2 = df.item.find(dfhack.items.createItem(itemType[1], itemType[2], mat[1], mat[2], creator))
-        assert(item2, 'failed to create item')
-        item2:setQuality(quality)
-        item2:setGloveHandedness(2)
+        --create matching gloves, if necessary
+        if item:getGloveHandedness() == 0 then
+            for _, it in pairs(items) do
+                it:setGloveHandedness(1)
+            end
+            local items2 = dfhack.items.createItem(creator, itemType[1], itemType[2], mat[1], mat[2])
+            assert(#items2 > 0, 'failed to create second gloves')
+            for _, it2 in pairs(items2) do
+                it2:setQuality(quality)
+                it2:setGloveHandedness(2)
+                table.insert(items, it2)
+            end
+        end
     elseif item_type == 'SHOES' then
         --create matching shoes
-        item2 = df.item.find(dfhack.items.createItem(itemType[1], itemType[2], mat[1], mat[2], creator))
-        assert(item2, 'failed to create item')
-        item2:setQuality(quality)
+        local items2 = dfhack.items.createItem(creator, itemType[1], itemType[2], mat[1], mat[2])
+        assert(#items2 > 0, 'failed to create second shoes')
+        for _, it2 in pairs(items2) do
+            it2:setQuality(quality)
+            table.insert(items, it2)
+        end
     end
     if tonumber(amount) > 1 then
         item:setStackSize(amount)
-        if item2 then item2:setStackSize(amount) end
     end
     if item_type == 'DRINK' then
         return moveToContainer(item, creator, 'BARREL')
     elseif mat_token == 'WATER' or mat_token == 'LYE' then
         return moveToContainer(item, creator, 'BUCKET')
     end
-    return {item, item2}
+    return items
 end
 
-local function get_first_citizen()
-    local citizens = dfhack.units.getCitizens()
-    if not citizens or not citizens[1] then
-        qerror('Could not choose a creator unit. Please select one in the UI')
+local function get_default_unit()
+    local citizens = dfhack.units.getCitizens(true)
+    if citizens and citizens[1] then
+        return citizens[1]
     end
-    return citizens[1]
+    local adventurer = dfhack.world.getAdventurer()
+    if adventurer then
+        return adventurer
+    end
+    qerror('Could not choose a creator unit. Please select one in the UI')
 end
 
 -- returns the list of created items, or nil on error
 function hackWish(accessors, opts)
-    local unit = accessors.get_unit(opts) or get_first_citizen()
+    local unit = accessors.get_unit(opts) or get_default_unit()
     local qualityok, quality = false, df.item_quality.Ordinary
     local itemok, itemtype, itemsubtype = accessors.get_item_type()
     if not itemok then return end

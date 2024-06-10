@@ -147,7 +147,7 @@ end
 function Editor_Unit:onInput(keys)
     local pages = self.subviews.pages
     if pages:getSelected() == 1 or
-            (not keys.LEAVESCREEN and not keys._MOUSE_R_DOWN) then
+            (not keys.LEAVESCREEN and not keys._MOUSE_R) then
         return Editor_Unit.super.onInput(self, keys)
     end
     local page = pages:getSelectedPage()

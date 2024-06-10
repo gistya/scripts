@@ -1,11 +1,5 @@
 -- Exports an ini file for Dwarf Therapist.
---[====[
-devel/export-dt-ini
-===================
-Exports an ini file containing memory addresses for Dwarf Therapist.
-]====]
 
-local utils = require 'utils'
 local ms = require 'memscan'
 
 -- Utility functions
@@ -130,6 +124,7 @@ address('world_site_type',df.world_site,'type')
 address('active_sites_vector',df.world_data,'active_site')
 address('gview',globals,'gview')
 address('external_flag',globals,'game','external_flag')
+address('global_equipment_update',globals,'plotinfo','equipment','update')
 vtable('viewscreen_setupdwarfgame_vtable','viewscreen_setupdwarfgamest')
 
 header('offsets')
@@ -320,11 +315,11 @@ address('civ',df.unit,'civ_id')
 address('specific_refs',df.unit,'specific_refs')
 address('squad_id',df.unit,'military','squad_id')
 address('squad_position',df.unit,'military','squad_position')
-address('recheck_equipment',df.unit,'military','pickup_flags')
+address('recheck_equipment',df.unit,'uniform','pickup_flags')
 address('mood',df.unit,'mood')
 address('birth_year',df.unit,'birth_year')
 address('birth_time',df.unit,'birth_time')
-address('pet_owner_id',df.unit,'relationship_ids',df.unit_relationship_type.Pet)
+address('pet_owner_id',df.unit,'relationship_ids',df.unit_relationship_type.PetOwner)
 address('current_job',df.unit,'job','current_job')
 address('physical_attrs',df.unit,'body','physical_attrs')
 address('body_size',df.unit,'appearance','body_modifiers')
@@ -405,13 +400,13 @@ address('focus_level',df.unit_personality.T_needs,'focus_level')
 address('need_level',df.unit_personality.T_needs,'need_level')
 
 header('emotion_offsets')
-address('emotion_type',df.unit_personality.T_emotions,'type')
-address('strength',df.unit_personality.T_emotions,'strength')
-address('thought_id',df.unit_personality.T_emotions,'thought')
-address('sub_id',df.unit_personality.T_emotions,'subthought')
-address('level',df.unit_personality.T_emotions,'severity')
-address('year',df.unit_personality.T_emotions,'year')
-address('year_tick',df.unit_personality.T_emotions,'year_tick')
+address('emotion_type',df.personality_moodst,'type')
+address('strength',df.personality_moodst,'relative_strength')
+address('thought_id',df.personality_moodst,'thought')
+address('sub_id',df.personality_moodst,'subthought')
+address('level',df.personality_moodst,'severity')
+address('year',df.personality_moodst,'year')
+address('year_tick',df.personality_moodst,'year_tick')
 
 header('job_details')
 address('id',df.job,'job_type')
@@ -449,6 +444,7 @@ address('shield_vector',df.squad_position,'uniform','shield')
 address('weapon_vector',df.squad_position,'uniform','weapon')
 address('uniform_item_filter',df.squad_uniform_spec,'item_filter')
 address('uniform_indiv_choice',df.squad_uniform_spec,'indiv_choice')
+address('equipment_update',df.squad,'ammo','update')
 
 header('activity_offsets')
 address('activity_type',df.activity_entry,'type')

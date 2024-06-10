@@ -58,6 +58,18 @@ function getTargetFromScreens()
             or dfhack.gui.getSelectedJob(true) or dfhack.gui.getSelectedBuilding(true)
             or dfhack.gui.getSelectedStockpile(true) or dfhack.gui.getSelectedCivZone(true)
     if not my_trg then
+        if dfhack.gui.matchFocusString('dwarfmode/ViewSheets/ENGRAVING', dfhack.gui.getDFViewscreen(true)) then
+            local sheet = df.global.game.main_interface.view_sheets
+            local pos = xyz2pos(sheet.viewing_x, sheet.viewing_y, sheet.viewing_z)
+            for _, engraving in ipairs(df.global.world.event.engravings) do
+                if same_xyz(engraving.pos, pos) then
+                    my_trg = engraving
+                    break
+                end
+            end
+        end
+    end
+    if not my_trg then
         qerror("No valid target found")
     end
     return my_trg
@@ -113,6 +125,12 @@ end
 function GmEditorUi:init(args)
     if not next(self.frame) then
         self.frame = {w=80, h=50}
+    else
+        for k,v in pairs(self.frame) do
+            if v < 0 then
+                self.frame[k] = 0
+            end
+        end
     end
 
     -- don't appear directly over the current window
@@ -136,9 +154,8 @@ function GmEditorUi:init(args)
 
     local helpPage=widgets.Panel{
         subviews={widgets.Label{text=helptext,frame = {l=1,t=1,yalign=0}}}}
-    local mainList=widgets.List{view_id="list_main",choices={},frame = {l=1,t=3,yalign=0},on_submit=self:callback("editSelected"),
-        on_submit2=self:callback("editSelectedRaw"),
-        text_pen=COLOR_GREY, cursor_pen=COLOR_YELLOW}
+    local mainList=widgets.List{view_id="list_main",choices={},frame = {l=1,t=3,yalign=0},on_double_click=self:callback("editSelected"),
+        on_double_click2=self:callback("editSelectedRaw"), text_pen=COLOR_GREY, cursor_pen=COLOR_YELLOW}
     local mainPage=widgets.Panel{
         subviews={
             mainList,
@@ -428,16 +445,13 @@ function GmEditorUi:gotoPos()
         end
     end
     if pos then
-        dfhack.gui.revealInDwarfmodeMap(pos,true)
-        df.global.game.main_interface.recenter_indicator_m.x = pos.x
-        df.global.game.main_interface.recenter_indicator_m.y = pos.y
-        df.global.game.main_interface.recenter_indicator_m.z = pos.z
+        dfhack.gui.revealInDwarfmodeMap(pos,true,true)
     end
 end
 function GmEditorUi:editSelectedRaw(index,choice)
     self:editSelected(index, choice, {raw=true})
 end
-function GmEditorUi:editSelected(index,choice,opts)
+function GmEditorUi:editSelected(index,_,opts)
     if not self:verifyStack() then
         self:updateTarget()
         return
@@ -506,9 +520,22 @@ function GmEditorUi:set(key,input)
     self:updateTarget(true)
 end
 function GmEditorUi:onInput(keys)
-    if GmEditorUi.super.onInput(self, keys) then return true end
+    if GmEditorUi.super.onInput(self, keys) then
+        local index = self.subviews.list_main:getIdxUnderMouse()
+        if keys._MOUSE_L and index then
+            local trg = self:currentTarget()
+            local trg_type = type(trg.target[trg.keys[index]])
+            if trg_type == 'userdata' or trg_type == 'table' then
+                self:editSelected(index)
+            end
+        end
+        return true
+    end
 
-    if keys.LEAVESCREEN or keys._MOUSE_R_DOWN then
+    if keys.LEAVESCREEN or keys._MOUSE_R then
+        if dfhack.internal.getModifiers().shift then
+            return false
+        end
         if self.subviews.pages:getSelected()==2 then
             self.subviews.pages:setSelected(1)
         else
@@ -521,12 +548,15 @@ function GmEditorUi:onInput(keys)
         return false
     end
 
-    if keys[keybindings.toggle_ro.key] then
+    if keys.SELECT then
+        self:editSelected(self.subviews.list_main:getSelected())
+    elseif keys[keybindings.toggle_ro.key] then
         self.read_only = not self.read_only
         self:updateTitles()
         return true
     elseif keys[keybindings.autoupdate.key] then
         self.autoupdate = not self.autoupdate
+        self:updateTitles()
         return true
     elseif keys[keybindings.offset.key] then
         local trg=self:currentTarget()
@@ -595,17 +625,19 @@ end
 function GmEditorUi:updateTitles()
     local title = "GameMaster's Editor"
     if self.read_only then
-        title = title.." (Read Only)"
+        title = title.." (Read only)"
     end
     for view,_ in pairs(views) do
-        view.subviews[1].frame_title = title
+        local window = view.subviews[1]
+        window.read_only = self.read_only
+        window.frame_title = title .. (window.autoupdate and ' (Live updates)' or '')
     end
-    self.frame_title = title
     save_config({read_only = self.read_only})
 end
 function GmEditorUi:updateTarget(preserve_pos,reindex)
     self:verifyStack()
     local trg=self:currentTarget()
+    if not trg then return end
     local filter=self.subviews.filter_input.text:lower()
 
     if reindex then

@@ -2,13 +2,6 @@ local gui = require('gui')
 local guidm = require('gui.dwarfmode')
 local widgets = require('gui.widgets')
 
-local function get_dims(pos1, pos2)
-    local width, height, depth = math.abs(pos1.x - pos2.x) + 1,
-            math.abs(pos1.y - pos2.y) + 1,
-            math.abs(pos1.z - pos2.z) + 1
-    return width, height, depth
-end
-
 local function is_good_item(item, include)
     if not item then return false end
     if not item.flags.on_ground or item.flags.garbage_collect or
@@ -29,7 +22,7 @@ end
 Autodump = defclass(Autodump, widgets.Window)
 Autodump.ATTRS {
     frame_title='Autodump',
-    frame={w=48, h=18, r=2, t=18},
+    frame={w=48, h=16, r=2, t=18},
     resizable=true,
     resize_min={h=10},
     autoarrange_subviews=true,
@@ -49,19 +42,6 @@ function Autodump:init()
             text_to_wrap=self:callback('get_help_text'),
         },
         widgets.Panel{frame={h=1}},
-        widgets.Panel{
-            frame={h=2},
-            subviews={
-                widgets.Label{
-                    frame={l=0, t=0},
-                    text={
-                        'Selected area: ',
-                        {text=self:callback('get_selection_area_text')}
-                    },
-                },
-            },
-            visible=function() return self.mark end,
-        },
         widgets.HotkeyLabel{
             frame={l=0},
             label='Dump to tile under mouse cursor',
@@ -174,7 +154,7 @@ end
 function Autodump:refresh_dump_items()
     local dump_items = {}
     local include = self:get_include()
-    for _,item in ipairs(df.global.world.items.all) do
+    for _,item in ipairs(df.global.world.items.other.IN_PLAY) do
         if not is_good_item(item, include) then goto continue end
         if item.flags.dump then
             table.insert(dump_items, item)
@@ -198,13 +178,6 @@ function Autodump:get_help_text()
         self.prev_help_text = ret
     end
     return ret
-end
-
-function Autodump:get_selection_area_text()
-    local mark = self.mark
-    if not mark then return '' end
-    local cursor = dfhack.gui.getMousePos() or {x=mark.x, y=mark.y, z=df.global.window_z}
-    return ('%dx%dx%d'):format(get_dims(mark, cursor))
 end
 
 function Autodump:get_bounds(cursor, mark)
@@ -267,11 +240,11 @@ end
 
 function Autodump:onInput(keys)
     if Autodump.super.onInput(self, keys) then return true end
-    if keys._MOUSE_R_DOWN and self.mark then
+    if keys._MOUSE_R and self.mark then
         self.mark = nil
         self:updateLayout()
         return true
-    elseif keys._MOUSE_L_DOWN then
+    elseif keys._MOUSE_L then
         if self:getMouseFramePos() then return true end
         local pos = dfhack.gui.getMousePos()
         if not pos then
@@ -411,7 +384,13 @@ AutodumpScreen.ATTRS {
 }
 
 function AutodumpScreen:init()
-    self:addviews{Autodump{}}
+    local window = Autodump{}
+    self:addviews{
+        window,
+        widgets.DimensionsTooltip{
+            get_anchor_pos_fn=function() return window.mark end,
+        },
+    }
 end
 
 function AutodumpScreen:onDismiss()

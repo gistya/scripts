@@ -6,9 +6,7 @@ buildings (e.g. beds have to be inside, doors have to be adjacent to a wall,
 etc.). A notable exception is that we allow constructions and machine components
 to be designated regardless of whether they are reachable or currently
 supported. This allows the user to designate an entire floor of an above-ground
-building or an entire power system without micromanagement. We also don't
-enforce that materials are accessible from the designation location. That is
-something that the player can manage.
+building or an entire power system without micromanagement.
 ]]
 
 if not dfhack_flags.module then
@@ -16,7 +14,7 @@ if not dfhack_flags.module then
 end
 
 local argparse = require('argparse')
-local utils = require('utils')
+local orders = require('plugins.orders')
 local quickfort_common = reqscript('internal/quickfort/common')
 local quickfort_building = reqscript('internal/quickfort/building')
 local quickfort_orders = reqscript('internal/quickfort/orders')
@@ -24,6 +22,7 @@ local quickfort_parse = reqscript('internal/quickfort/parse')
 local quickfort_place = reqscript('internal/quickfort/place')
 local quickfort_transform = reqscript('internal/quickfort/transform')
 local stockpiles = require('plugins.stockpiles')
+local utils = require('utils')
 
 local ok, buildingplan = pcall(require, 'plugins.buildingplan')
 if not ok then
@@ -39,7 +38,12 @@ local log = quickfort_common.log
 local function is_valid_tile_base(pos)
     local flags, occupancy = dfhack.maps.getTileFlags(pos)
     if not flags then return false end
-    return not flags.hidden and occupancy.building == 0
+    if (flags.liquid_type == true or flags.liquid_type == df.tile_liquid.Magma) and
+        flags.flow_size >= 1
+    then
+        return false
+    end
+    return not flags.hidden and flags.flow_size <= 1 and occupancy.building == 0
 end
 
 local function is_valid_tile_generic(pos)
@@ -114,12 +118,26 @@ local function is_valid_tile_bridge(pos, db_entry, b)
     return is_valid_tile_has_space_or_is_ramp(pos)
 end
 
-local function is_valid_tile_construction(pos)
+-- although vanilla allows constructions to be built on top of constructed
+-- floors or ramps, we want to offer an idempotency guarantee for quickfort.
+-- this means that the user should be able to apply the same blueprint to the
+-- same area more than once to complete any bits that failed on the first attempt.
+-- therefore, we check that we're not building a construction on top of an
+-- existing construction of the same shape
+local function is_valid_tile_construction(pos, db_entry)
+    if not is_valid_tile_has_space_or_is_ramp(pos) then return false end
     local tileattrs = df.tiletype.attrs[dfhack.maps.getTileType(pos)]
     local shape = tileattrs.shape
     local mat = tileattrs.material
-    return is_valid_tile_has_space_or_is_ramp(pos) and
-            mat ~= df.tiletype_material.CONSTRUCTION
+    if mat == df.tiletype_material.CONSTRUCTION and
+        (
+            (shape == df.tiletype_shape.FLOOR and db_entry.subtype == df.construction_type.Floor) or
+            (shape == df.tiletype_shape.RAMP and db_entry.subtype == df.construction_type.Ramp)
+        )
+    then
+        return false
+    end
+    return true
 end
 
 local function is_shape_at(pos, allowed_shapes)
@@ -141,11 +159,18 @@ local function is_tile_generic_and_wall_adjacent(pos)
             is_shape_at(xyz2pos(pos.x, pos.y-1, pos.z), allowed_door_shapes)
 end
 
+local function is_floor(pos)
+    local tt = dfhack.maps.getTileType(pos)
+    if not tt then return false end
+    local shape = df.tiletype.attrs[tt].shape
+    return df.tiletype_shape.attrs[shape].basic_shape == df.tiletype_shape_basic.Floor
+end
+
 local function is_tile_floor_adjacent(pos)
-    return is_valid_tile_generic(xyz2pos(pos.x+1, pos.y, pos.z)) or
-            is_valid_tile_generic(xyz2pos(pos.x-1, pos.y, pos.z)) or
-            is_valid_tile_generic(xyz2pos(pos.x, pos.y+1, pos.z)) or
-            is_valid_tile_generic(xyz2pos(pos.x, pos.y-1, pos.z))
+    return is_floor(xyz2pos(pos.x+1, pos.y, pos.z)) or
+        is_floor(xyz2pos(pos.x-1, pos.y, pos.z)) or
+        is_floor(xyz2pos(pos.x, pos.y+1, pos.z)) or
+        is_floor(xyz2pos(pos.x, pos.y-1, pos.z))
 end
 
 -- for wells
@@ -221,6 +246,50 @@ local function do_farm_props(db_entry, props)
     end
 end
 
+local LABOR_MAP = {}
+for idx, name in ipairs(df.unit_labor) do
+    local caption = df.unit_labor.attrs[idx].caption
+    if caption then
+        LABOR_MAP[name:lower()] = idx
+        LABOR_MAP[caption:lower()] = idx
+    end
+end
+
+local RATING_MAP = {}
+for idx, name in ipairs(df.skill_rating) do
+    local caption = df.skill_rating.attrs[idx].caption
+    if caption then
+        RATING_MAP[name:lower()] = idx
+        RATING_MAP[caption:lower()] = idx
+    end
+end
+
+local function parse_profile_prop(map, prop)
+    return map[prop:lower()]
+end
+
+local function parse_labor_prop(prop)
+    local ret = {}
+    for _, spec in ipairs(argparse.stringList(prop)) do
+        local val = parse_profile_prop(LABOR_MAP, spec)
+        if val then
+            ret[val] = true
+        else
+            dfhack.printerr(('unknown labor type: "%s"'):format(spec))
+        end
+    end
+    return ret
+end
+
+local function make_labor_profile(db_entry, labors, is_mask)
+    local blocked_labors = {resize=false}
+    for _, name in ipairs(orders.get_profile_labors(db_entry.type, db_entry.subtype)) do
+        local is_specified = labors[df.unit_labor[name]]
+        blocked_labors[name] = (is_specified and is_mask) or (not is_specified and not is_mask)
+    end
+    return blocked_labors
+end
+
 local function do_workshop_furnace_props(db_entry, props)
     if props.take_from then
         db_entry.links.take_from = argparse.stringList(props.take_from)
@@ -233,6 +302,32 @@ local function do_workshop_furnace_props(db_entry, props)
     if props.max_general_orders and tonumber(props.max_general_orders) then
         ensure_key(db_entry.props, 'profile').max_general_orders = math.max(0, math.min(10, tonumber(props.max_general_orders)))
         props.max_general_orders = nil
+    end
+    if props.labor_mask then
+        local labors = parse_labor_prop(props.labor_mask)
+        ensure_key(db_entry.props, 'profile').blocked_labors = make_labor_profile(db_entry, labors, true)
+        props.labor_mask = nil
+    end
+    if props.labor then
+        local labors = parse_labor_prop(props.labor)
+        ensure_key(db_entry.props, 'profile').blocked_labors = make_labor_profile(db_entry, labors, false)
+        props.labor = nil
+    end
+    if props.min_skill then
+        local val = parse_profile_prop(RATING_MAP, props.min_skill)
+        ensure_key(db_entry.props, 'profile').min_level = val
+        props.min_skill = nil
+    end
+    if props.max_skill then
+        local val = parse_profile_prop(RATING_MAP, props.max_skill)
+        local profile = ensure_key(db_entry.props, 'profile')
+        profile.max_level = val
+        if profile.max_level and profile.min_level then
+            if profile.max_level < profile.min_level then
+                profile.max_level = profile.min_level
+            end
+        end
+        props.max_skill = nil
     end
 end
 
@@ -251,7 +346,7 @@ local function do_trackstop_props(db_entry, props)
         (props.friction == '50000' or props.friction == '10000' or props.friction == '500' or
          props.friction == '50' or props.friction == '10')
     then
-        db_entry.props.friction = tonumber(props.friction)
+        ensure_key(db_entry.props, 'track_stop_info').friction = tonumber(props.friction)
         props.friction = nil
     end
     if props.take_from then
@@ -297,10 +392,17 @@ local function add_stop(name, pos, adjustments)
         id=stop_id,
         pos=pos,
     })
-    stockpiles.import_route('library/everything', route.id, stop_id, 'set')
+    local opts = {
+        route_id=route.id,
+        stop_id=stop_id,
+        mode='set',
+    }
+    stockpiles.import_settings('library/everything', opts)
     for _, adj in ipairs(adjustments) do
         log('applying stockpile preset: %s %s', adj.mode, adj.name)
-        stockpiles.import_route(adj.name, route.id, stop_id, adj.mode, adj.filters)
+        opts.mode = adj.mode
+        opts.filters = adj.filters
+        stockpiles.import_settings(adj.name, opts)
     end
     return route.stops[#route.stops-1]
 end
@@ -313,10 +415,13 @@ local function do_trackstop_adjust(db_entry, bld)
         local from_names = {}
         for _,from_name in ipairs(db_entry.route.from_names) do
             from_names[from_name:lower()] = true
+            if tonumber(from_name) then
+                from_names[tonumber(from_name)] = true
+            end
         end
         for _, pile in ipairs(df.global.world.buildings.other.STOCKPILE) do
             local name = string.lower(pile.name)
-            if from_names[name] then
+            if from_names[name] or from_names[pile.id] then
                 stop.stockpiles:insert('#', {
                     new=df.route_stockpile_link,
                     building_id=pile.id,
@@ -527,13 +632,13 @@ local function make_transform_trackstop_fn(vector, friction)
     return make_transform_building_fn(vector, trackstop_revmap, post_fn)
 end
 local function make_trackstop_entry(direction, friction)
-    local label, fields, transform = 'No Dump', {friction=friction}, nil
+    local label, fields, transform = 'No Dump', {track_stop_info={friction=friction}}, nil
     if direction then
-        fields.use_dump = 1
+        ensure_key(fields.track_stop_info, 'track_flags').use_dump = true
         for k,v in pairs(direction) do
             local trackstop_data_entry = trackstop_data[k][v]
             label = trackstop_data_entry.label
-            fields[k] = v
+            fields.track_stop_info[k] = v
             transform = make_transform_trackstop_fn(
                     trackstop_data_entry.vector, friction)
         end
@@ -697,8 +802,7 @@ local building_db_raw = {
     Mrsssqq=make_roller_entry(df.screw_pump_direction.FromWest, 30000),
     Mrsssqqq=make_roller_entry(df.screw_pump_direction.FromWest, 20000),
     Mrsssqqqq=make_roller_entry(df.screw_pump_direction.FromWest, 10000),
-    -- Instruments are not yet supported by DFHack
-    -- I={label='Instrument', type=df.building_type.Instrument},
+    I={label='Instrument', type=df.building_type.Instrument},
     S={label='Support', type=df.building_type.Support,
        is_valid_tile_fn=is_valid_tile_has_space},
     m={label='Animal Trap', type=df.building_type.AnimalTrap},
@@ -1146,8 +1250,12 @@ local function create_building(b, cache, dry_run)
                 utils.insert_sorted(bld.profile.links.give_to_pile, to, 'id')
                 utils.insert_sorted(to.links.take_from_workshop, bld, 'id')
             end
+        elseif cache.piles[tonumber(recipient)] then
+            local to = cache.piles[tonumber(recipient)]
+            utils.insert_sorted(bld.profile.links.give_to_pile, to, 'id')
+            utils.insert_sorted(to.links.take_from_workshop, bld, 'id')
         else
-            dfhack.printerr(('cannot find stockpile named "%s" to give to'):format(recipient))
+            dfhack.printerr(('cannot find stockpile with name or id "%s" to give to'):format(recipient))
         end
     end
     for _,supplier in ipairs(db_entry.links.take_from) do
@@ -1157,8 +1265,12 @@ local function create_building(b, cache, dry_run)
                 utils.insert_sorted(bld.profile.links.take_from_pile, from, 'id')
                 utils.insert_sorted(from.links.give_to_workshop, bld, 'id')
             end
+        elseif cache.piles[tonumber(supplier)] then
+            local from = cache.piles[tonumber(supplier)]
+            utils.insert_sorted(bld.profile.links.take_from_pile, from, 'id')
+            utils.insert_sorted(from.links.give_to_workshop, bld, 'id')
         else
-            dfhack.printerr(('cannot find stockpile named "%s" to take from'):format(supplier))
+            dfhack.printerr(('cannot find stockpile with name or id "%s" to take from'):format(supplier))
         end
     end
     if buildingplan and buildingplan.isEnabled() and

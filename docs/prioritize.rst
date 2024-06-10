@@ -2,7 +2,7 @@ prioritize
 ==========
 
 .. dfhack-tool::
-    :summary: Automatically boost the priority of selected job types.
+    :summary: Automatically boost the priority of important job types.
     :tags: fort auto jobs
 
 This tool encourages specified types of jobs to get assigned and completed as
@@ -121,3 +121,13 @@ The default prioritize list includes:
 - Noble-specific tasks (like managing workorders)
 - Dumping items, felling trees, and other tasks that you, as a player, might
   stare at and internally scream "why why why isn't this getting done??".
+
+Overlay
+-------
+
+This script also provides an overlay that is managed by the `overlay`
+framework. A panel is added to the info sheet for buildings that are queued for
+construction or destruction. If a unit has taken the job, their name will be
+listed. Click on the name to zoom to the unit. There is also a toggle button
+for high priority status for the job. Toggle it on if the job is not being
+taken and you need it to be completed quickly.

@@ -94,3 +94,15 @@ Trade agreement
 
 A small panel is shown with a hotkey (``Ctrl-A``) for selecting all/none in the
 currently shown category.
+
+Display furniture
+`````````````````
+
+A button is added to the screen when you are viewing display furniture
+(pedestals and display cases) where you can launch an item assignment GUI.
+
+The dialog allows you to sort by name, value, or where the item is currently
+assigned for display.
+
+You can search by name, and you can filter by item quality and by whether the
+item is forbidden.

@@ -46,7 +46,7 @@ end
 
 local last_frame = df.global.world.frame_counter-1
 
-for _,item in ipairs(df.global.world.items.all) do
+for _,item in ipairs(df.global.world.items.other.IN_PLAY) do
     local item = item --as:df.item_actual
     if item.flags.on_ground and df.item_actual:is_instance(item) and
        item.temp_updated_frame == last_frame then

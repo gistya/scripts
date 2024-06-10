@@ -9,8 +9,8 @@ Empties all wheelbarrows which contain rocks that have become 'stuck' in them.
 
 This works around the issue encountered with :bug:`6074`, and should be run
 if you notice wheelbarrows lying around with rocks in them that aren't
-being used in a task. This script can also be set to run periodically in
-the background by toggling the Maintenance task in `gui/control-panel`.
+being used in a task. This script is set to run periodically by default in
+`gui/control-panel`.
 
 Usage
 -----

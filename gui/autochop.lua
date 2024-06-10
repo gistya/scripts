@@ -101,7 +101,7 @@ function BurrowSettings:commit()
 end
 
 function BurrowSettings:onInput(keys)
-    if keys.LEAVESCREEN or keys._MOUSE_R_DOWN then
+    if keys.LEAVESCREEN or keys._MOUSE_R then
         self:hide()
         return true
     end

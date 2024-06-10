@@ -8,6 +8,7 @@
 local common = reqscript('internal/caravan/common')
 local gui = require('gui')
 local overlay = require('plugins.overlay')
+local predicates = reqscript('internal/caravan/predicates')
 local widgets = require('gui.widgets')
 
 trader_selected_state = trader_selected_state or {}
@@ -142,6 +143,8 @@ local FILTER_HEIGHT = 15
 
 function Trade:init()
     self.cur_page = 1
+    self.filters = {'', ''}
+    self.predicate_contexts = {{name='trade_caravan'}, {name='trade_fort'}}
 
     self.animal_ethics = common.is_animal_lover_caravan(trade.mer)
     self.wood_ethics = common.is_tree_lover_caravan(trade.mer)
@@ -151,7 +154,7 @@ function Trade:init()
     self:addviews{
         widgets.CycleHotkeyLabel{
             view_id='sort',
-            frame={l=0, t=0, w=21},
+            frame={t=0, l=0, w=21},
             label='Sort by:',
             key='CUSTOM_SHIFT_S',
             options={
@@ -165,15 +168,9 @@ function Trade:init()
             initial_option=sort_by_status_desc,
             on_change=self:callback('refresh_list', 'sort'),
         },
-        widgets.EditField{
-            view_id='search',
-            frame={l=26, t=0},
-            label_text='Search: ',
-            on_char=function(ch) return ch:match('[%l -]') end,
-        },
         widgets.ToggleHotkeyLabel{
             view_id='trade_bins',
-            frame={t=2, l=0, w=36},
+            frame={t=0, l=26, w=36},
             label='Bins:',
             key='CUSTOM_SHIFT_B',
             options={
@@ -183,9 +180,24 @@ function Trade:init()
             initial_option=false,
             on_change=function() self:refresh_list() end,
         },
+        widgets.TabBar{
+            frame={t=2, l=0},
+            labels={
+                'Caravan goods',
+                'Fort goods',
+            },
+            on_select=function(idx)
+                local list = self.subviews.list
+                self.filters[self.cur_page] = list:getFilter()
+                list:setFilter(self.filters[idx])
+                self.cur_page = idx
+                self:refresh_list()
+            end,
+            get_cur_page=function() return self.cur_page end,
+        },
         widgets.ToggleHotkeyLabel{
             view_id='filters',
-            frame={t=2, l=40, w=36},
+            frame={t=5, l=0, w=36},
             label='Show filters:',
             key='CUSTOM_SHIFT_F',
             options={
@@ -195,17 +207,11 @@ function Trade:init()
             initial_option=false,
             on_change=function() self:updateLayout() end,
         },
-        widgets.TabBar{
-            frame={t=4, l=0},
-            labels={
-                'Caravan goods',
-                'Fort goods',
-            },
-            on_select=function(idx)
-                self.cur_page = idx
-                self:refresh_list()
-            end,
-            get_cur_page=function() return self.cur_page end,
+        widgets.EditField{
+            view_id='search',
+            frame={t=5, l=40},
+            label_text='Search: ',
+            on_char=function(ch) return ch:match('[%l -]') end,
         },
         widgets.Panel{
             frame={t=7, l=0, r=0, h=FILTER_HEIGHT},
@@ -230,9 +236,14 @@ function Trade:init()
                     subviews=common.get_slider_widgets(self, '2'),
                 },
                 widgets.Panel{
+                    frame={b=0, l=40, r=0, h=2},
+                    visible=function() return self.cur_page == 1 end,
+                    subviews=common.get_advanced_filter_widgets(self, self.predicate_contexts[1]),
+                },
+                widgets.Panel{
                     frame={t=2, l=40, r=0, h=FILTER_HEIGHT-2},
                     visible=function() return self.cur_page == 2 end,
-                    subviews=common.get_info_widgets(self, {trade.mer.buy_prices}),
+                    subviews=common.get_info_widgets(self, {trade.mer.buy_prices}, self.predicate_contexts[2]),
                 },
             },
         },
@@ -363,7 +374,7 @@ function Trade:cache_choices(list_idx, trade_bins)
         local is_banned, is_risky = common.scan_banned(item, self.risky_items)
         local is_requested = dfhack.items.isRequestedTradeGood(item, trade.mer)
         local wear_level = item:getWear()
-        local desc = common.get_item_description(item)
+        local desc = dfhack.items.getReadableDescription(item)
         local is_ethical = is_ethical_product(item, self.animal_ethics, self.wood_ethics)
         local data = {
             desc=desc,
@@ -387,13 +398,19 @@ function Trade:cache_choices(list_idx, trade_bins)
             parent_data.has_requested = parent_data.has_requested or is_requested
             parent_data.ethical = parent_data.ethical and is_ethical
         end
+        local is_container = df.item_binst:is_instance(item)
+        local search_key
+        if (trade_bins and is_container) or item:isFoodStorage() then
+            search_key = common.make_container_search_key(item, desc)
+        else
+            search_key = common.make_search_key(desc)
+        end
         local choice = {
-            search_key=common.make_search_key(desc),
+            search_key=search_key,
             icon=curry(get_entry_icon, data),
             data=data,
             text=make_choice_text(data.value, desc),
         }
-        local is_container = df.item_binst:is_instance(item)
         if not data.update_container_fn then
             table.insert(trade_bins_choices, choice)
         end
@@ -437,6 +454,9 @@ function Trade:get_choices()
             if data.has_banned or (banned ~= 'banned_only' and data.has_risky) then
                 goto continue
             end
+        end
+        if not predicates.pass_predicates(self.predicate_contexts[self.cur_page], data.item) then
+            goto continue
         end
         table.insert(choices, choice)
         ::continue::
@@ -511,7 +531,7 @@ end
 function TradeScreen:onInput(keys)
     if self.reset_pending then return false end
     local handled = TradeScreen.super.onInput(self, keys)
-    if keys._MOUSE_L_DOWN and not self.trade_window:getMouseFramePos() then
+    if keys._MOUSE_L and not self.trade_window:getMouseFramePos() then
         -- "trade" or "offer" buttons may have been clicked and we need to reset the cache
         self.reset_pending = true
     end
@@ -520,7 +540,7 @@ end
 
 function TradeScreen:onRenderFrame()
     if not df.global.game.main_interface.trade.open then
-        view:dismiss()
+        if view then view:dismiss() end
     elseif self.reset_pending then
         self.reset_pending = nil
         self.trade_window:reset_cache()
@@ -699,6 +719,7 @@ end
 
 TradeOverlay = defclass(TradeOverlay, overlay.OverlayWidget)
 TradeOverlay.ATTRS{
+    desc='Adds convenience functions for working with bins to the trade screen.',
     default_pos={x=-3,y=-12},
     default_enabled=true,
     viewscreens='dwarfmode/Trade/Default',
@@ -766,7 +787,7 @@ end
 function TradeOverlay:onInput(keys)
     if TradeOverlay.super.onInput(self, keys) then return true end
 
-    if keys._MOUSE_L_DOWN then
+    if keys._MOUSE_L then
         if dfhack.internal.getModifiers().shift then
             handle_shift_click_on_render = true
             copyGoodflagState()
@@ -783,6 +804,7 @@ end
 
 TradeBannerOverlay = defclass(TradeBannerOverlay, overlay.OverlayWidget)
 TradeBannerOverlay.ATTRS{
+    desc='Adds link to the trade screen to launch the DFHack trade UI.',
     default_pos={x=-31,y=-7},
     default_enabled=true,
     viewscreens='dwarfmode/Trade/Default',
@@ -805,7 +827,7 @@ end
 function TradeBannerOverlay:onInput(keys)
     if TradeBannerOverlay.super.onInput(self, keys) then return true end
 
-    if keys._MOUSE_R_DOWN or keys.LEAVESCREEN then
+    if keys._MOUSE_R or keys.LEAVESCREEN then
         if view then
             view:dismiss()
         end
