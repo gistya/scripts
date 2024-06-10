@@ -30,7 +30,7 @@ def signal_handler(sig, frame):
 # Register the signal handler
 signal.signal(signal.SIGINT, signal_handler)
 
-model_to_use = "text-davinci-003"
+model_to_use = "gpt-4o"
 
 if len(sys.argv) > 1:
     model_selection = sys.argv[1]
@@ -41,6 +41,9 @@ if len(sys.argv) > 1:
     elif model_selection == "-gpt4":
         model_to_use = "gpt-4"
         print("using gpt-4")
+    elif model_selection == "-gpt4o":
+        model_to_use = "gpt-4o"
+        print("using gpt-4o")
     elif model_selection == "help" or model_selection == "-help" or model_selection == "--help":
         print("`python gptserver.py` defaults to fast, cheap, legacy AI engine `text-davinci-003`")
         print("Valid options:")
@@ -51,7 +54,7 @@ if len(sys.argv) > 1:
         print("Invalid argument(s), aborting.")
         sys.exit(1)
 else:
-    print("Defaulting to model: `text-davinci-003`. Use -gpt3 or -gpt4 args for alternates. -help for details!")
+    print("Defaulting to model: `gpt-4o`. Use -gpt3 or -gpt4 args for alternates. -help for details!")
 
 while True:
     try:
