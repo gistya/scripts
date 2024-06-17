@@ -322,6 +322,7 @@ local function sanitize_response(data)
   data = string.gsub(data, ' – ', ' -- ')
   data = string.gsub(data, '–', ' -- ')
   data = string.gsub(data, '—', ' -- ')
+  data = string.gsub(data, '‖', '')
   data = dfhack.utf2df(data)
   return data
 end

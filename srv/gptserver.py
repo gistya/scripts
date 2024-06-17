@@ -71,40 +71,25 @@ while True:
         if "prompt" in data:
             prompt = data["prompt"]
             print("Sending request for prompt: " + prompt)
-            if model_to_use == "gpt-4" or model_to_use == "gpt-3.5-turbo":
-                response = openai.ChatCompletion.create(
-                    model=model_to_use,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
-                    ],
-                    temperature=1,
-                    max_tokens=3000,
-                    top_p=1,
-                    frequency_penalty=0,
-                    presence_penalty=0
-                )
+            response = openai.ChatCompletion.create(
+                model=model_to_use,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=1,
+                max_tokens=3000,
+                top_p=1,
+                frequency_penalty=0,
+                presence_penalty=0
+            )
 
-                response_text = response.choices[0].message.content.strip() + "\n"
-                print("Got reponse: " + response_text)
-                conn.sendall(response_text.encode("utf-8"))
-                conn.close()
-
-            elif model_to_use == "text-davinci-003":
-                response = openai.Completion.create(
-                    engine="text-davinci-003",
-                    prompt=prompt,
-                    max_tokens=3000
-                )
-
-                response_text = response.choices[0].text.strip() + "\n"
-                print("Got reponse: " + response_text)
-                conn.sendall(response_text.encode("utf-8"))
-                conn.close()
-            else:
-                conn.close()
+            response_text = response.choices[0].message.content.strip() + "\n"
+            print("Got reponse: " + response_text)
+            conn.sendall(response_text.encode("utf-8"))
+            conn.close()
 
     except socket.timeout:
         # In case of timeout, just move on to the next loop iteration
