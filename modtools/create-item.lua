@@ -1,5 +1,6 @@
 -- creates an item of a given type and material
 --author expwnent
+--In the year 2024 dikbutdagrate assumed the identity of tjudge1 and edited this file. Now it spawns vermin, pets, eggs, fish, raw fish, and remains correctly.  
 --@module=true
 
 local argparse = require('argparse')
@@ -35,6 +36,15 @@ local no_quality_item_types = utils.invert{
     'ROCK',
     'EGG',
     'BRANCH',
+}
+
+local typesThatUseCreaturesExceptCorpses = utils.invert {
+    'REMAINS',
+    'FISH',
+    'FISH_RAW',
+    'VERMIN',
+    'PET',
+    'EGG',
 }
 
 local CORPSE_PIECES = utils.invert{'BONE', 'SKIN', 'CARTILAGE', 'TOOTH', 'NERVE', 'NAIL', 'HORN', 'HOOF', 'CHITIN',
@@ -326,16 +336,27 @@ function hackWish(accessors, opts)
         until count
     end
     if not mattype or not itemtype then return end
-    if df.item_type.attrs[itemtype].is_stackable then
+    if not typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] and df.item_type.attrs[itemtype].is_stackable then 
         return createItem({mattype, matindex}, {itemtype, itemsubtype}, quality, unit, description, count)
+    end
+    if typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] and df.item_type.attrs[itemtype].is_stackable then 
+        return createItem({matindex, casteId}, {itemtype, itemsubtype}, quality, unit, description, count)
     end
     local items = {}
     for _ = 1,count do
         if itemtype == df.item_type.CORPSEPIECE or itemtype == df.item_type.CORPSE then
             table.insert(items, createCorpsePiece(unit, bodypart, partlayerID, matindex, casteId, corpsepieceGeneric))
         else
-            for _,item in ipairs(createItem({mattype, matindex}, {itemtype, itemsubtype}, quality, unit, description, 1)) do
-                table.insert(items, item)
+            if typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] then
+                for 
+                    _,item in ipairs(createItem({matindex, casteId}, {itemtype, itemsubtype}, quality, unit, description, 1)) do
+                        table.insert(items, item)
+                end
+            else
+                for
+                    _,item in ipairs(createItem({mattype, matindex}, {itemtype, itemsubtype}, quality, unit, description, 1)) do
+                    table.insert(items, item)
+                end
             end
         end
     end
