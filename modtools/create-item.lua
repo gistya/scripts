@@ -1,6 +1,5 @@
 -- creates an item of a given type and material
 --author expwnent
---In the year 2024 dikbutdagrate assumed the identity of tjudge1 and edited this file. Now it spawns vermin, pets, eggs, fish, raw fish, and remains correctly.
 --@module=true
 
 local argparse = require('argparse')
