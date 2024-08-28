@@ -1,6 +1,6 @@
 -- creates an item of a given type and material
 --author expwnent
---In the year 2024 dikbutdagrate assumed the identity of tjudge1 and edited this file. Now it spawns vermin, pets, eggs, fish, raw fish, and remains correctly.  
+--In the year 2024 dikbutdagrate assumed the identity of tjudge1 and edited this file. Now it spawns vermin, pets, eggs, fish, raw fish, and remains correctly.
 --@module=true
 
 local argparse = require('argparse')
@@ -336,10 +336,10 @@ function hackWish(accessors, opts)
         until count
     end
     if not mattype or not itemtype then return end
-    if not typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] and df.item_type.attrs[itemtype].is_stackable then 
+    if not typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] and df.item_type.attrs[itemtype].is_stackable then
         return createItem({mattype, matindex}, {itemtype, itemsubtype}, quality, unit, description, count)
     end
-    if typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] and df.item_type.attrs[itemtype].is_stackable then 
+    if typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] and df.item_type.attrs[itemtype].is_stackable then
         return createItem({matindex, casteId}, {itemtype, itemsubtype}, quality, unit, description, count)
     end
     local items = {}
@@ -348,7 +348,7 @@ function hackWish(accessors, opts)
             table.insert(items, createCorpsePiece(unit, bodypart, partlayerID, matindex, casteId, corpsepieceGeneric))
         else
             if typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] then
-                for 
+                for
                     _,item in ipairs(createItem({matindex, casteId}, {itemtype, itemsubtype}, quality, unit, description, 1)) do
                         table.insert(items, item)
                 end
