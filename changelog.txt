@@ -27,9 +27,9 @@ Template for new versions:
 # Future
 
 ## New Tools
-- `embark-anyone`: allows you to embark as any civilisation, including dead, and non-dwarven ones
-- `idle-crafting`: Allow dwarfs to automatically satisfy their need to craft objects.
-- `gui/family-affairs`: (reinstated) inspect or meddle with pregnancies, marriages, or lover relationsips
+- `embark-anyone`: allows you to embark as any civilization, including dead and non-dwarven ones
+- `idle-crafting`: allow dwarves to independently satisfy their need to craft objects
+- `gui/family-affairs`: (reinstated) inspect or meddle with pregnancies, marriages, or lover relationships
 
 ## New Features
 - `caravan`: DFHack dialogs for trade screens (both ``Bring goods to depot`` and the ``Trade`` barter screen) can now filter by item origins (foreign vs. fort-made) and can filter bins by whether they have a mix of ethically acceptable and unacceptable items in them
@@ -38,12 +38,12 @@ Template for new versions:
 - `quickfort`: ``#zone`` blueprints now integrated with `preserve-rooms` so you can create a zone and automatically assign it to a noble or administrative role
 
 ## Fixes
-- `timestream`: ensure child growth events (e.g. becoming an adult) are not skipped over
-- `empty-bin`: ``--liquids`` option correctly emptying containers filled with LIQUID_MISC
-- `gui/design`: Update Line & Freeform tools to not overcount tiles
+- `timestream`: ensure child growth events (e.g. becoming an adult) are not skipped
+- `empty-bin`: ``--liquids`` option now correctly empties containers filled with LIQUID_MISC (like lye)
+- `gui/design`: don't overcount "affected tiles" for Line & Freeform drawing tools
 
 ## Misc Improvements
-- `gui/sitemap`: show whether a unit is friendly, hostile, or wildlife
+- `gui/sitemap`: show whether a unit is friendly, hostile, or wild
 - `gui/sitemap`: show whether a unit is caged
 - `gui/control-panel`: include option for turning off dumping of old clothes for `tailor`, for players who have magma pit dumps and want to save old clothes from being dumped into the magma
 
