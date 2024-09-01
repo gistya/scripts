@@ -169,14 +169,14 @@ function TextEditor:setCursor(cursor_offset)
 end
 
 function TextEditor:getPreferredFocusState()
-    return true
+    return self.parent_view.focus
 end
 
 function TextEditor:postUpdateLayout()
     self:updateScrollbar(self.render_start_line_y)
 
     if self.subviews.text_area.cursor == nil then
-        local cursor = self.init_cursor or #self.text + 1
+        local cursor = self.init_cursor or #self.init_text + 1
         self.subviews.text_area:setCursor(cursor)
         self:scrollToCursor(cursor)
     end
@@ -232,6 +232,10 @@ end
 function TextEditor:onInput(keys)
     if (self.subviews.scrollbar.is_dragging) then
         return self.subviews.scrollbar:onInput(keys)
+    end
+
+    if keys._MOUSE_L then
+        self:setFocus(true)
     end
 
     return TextEditor.super.onInput(self, keys)
@@ -629,6 +633,8 @@ function TextEditorView:onInput(keys)
         self:paste()
         self.history:store(HISTORY_ENTRY.OTHER, self.text, self.cursor)
         return true
+    else
+        return TextEditor.super.onInput(self, keys)
     end
 end
 
