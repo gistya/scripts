@@ -37,12 +37,12 @@ function TableOfContents:init()
 
     local function can_prev()
         local toc = self.subviews.table_of_contents
-        return #toc:getChoices() > 0 and toc:getSelected() > 1
+        return #toc:getChoices() > 0
     end
     local function can_next()
         local toc = self.subviews.table_of_contents
         local num_choices = #toc:getChoices()
-        return num_choices > 0 and toc:getSelected() < num_choices
+        return num_choices > 0
     end
 
     self:addviews{

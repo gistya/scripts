@@ -26,6 +26,20 @@ NotesOverlay.ATTRS{
 function NotesOverlay:init()
 end
 
+function NotesOverlay:onInput(keys)
+    if keys._MOUSE_L then
+        local pos = dfhack.gui.getMousePos()
+
+        local notes = df.global.plotinfo.waypoints.points
+        for _, note in pairs(notes) do
+            if same_xyz(note.pos, pos) then
+                return NoteManager{note=note}:show()
+            end
+        end
+
+    end
+end
+
 function NotesOverlay:onRenderFrame(dc)
     if not df.global.pause_state and not dfhack.screen.inGraphicsMode() then
         return
@@ -56,9 +70,12 @@ NoteManager = defclass(NoteManager, gui.ZScreen)
 NoteManager.ATTRS{
     focus_path='hotspot/menu',
     hotspot_frame=DEFAULT_NIL,
+    note=DEFAULT_NIL,
 }
 
 function NoteManager:init()
+    local edit_mode = self.note ~= nil
+
     self:addviews{
         widgets.Window{
             frame={w=35,h=20},
@@ -76,7 +93,8 @@ function NoteManager:init()
                     focus_path='notes/name',
                     frame={t=1,h=3},
                     frame_style=gui.FRAME_INTERIOR,
-                    frame_style_b=nil,NoteManager
+                    frame_style_b=nil,
+                    init_text=self.note and self.note.name or ''
                 },
                 widgets.HotkeyLabel {
                     key='CUSTOM_ALT_C',
@@ -89,13 +107,21 @@ function NoteManager:init()
                     frame={t=5,b=3},
                     focus_path='notes/comment',
                     frame_style=gui.FRAME_INTERIOR,
+                    init_text=self.note and self.note.comment or ''
                 },
                 widgets.Panel{
                     view_id='buttons',
                     frame={b=0,h=3},
                     autoarrange_subviews=true,
                     subviews={
-                        widgets.TextButton{
+                        edit_mode and widgets.TextButton{
+                            view_id='Save',
+                            frame={h=1},
+                            label='Save',
+                            key='CUSTOM_ALT_S',
+                            on_activate=function() self:saveNote() end,
+                            enabled=function() return #self.subviews.name:getText() > 0 end,
+                        } or widgets.TextButton{
                             view_id='Create',
                             frame={h=1},
                             label='Create',
@@ -109,12 +135,12 @@ function NoteManager:init()
                             label='Cancel',
                             key='LEAVESCREEN'
                         },
-                        widgets.TextButton{
+                        edit_mode and widgets.TextButton{
                             view_id='delete',
                             frame={h=1},
                             label='Delete',
                             key='CUSTOM_ALT_D',
-                        },
+                        } or nil,
                     }
                 }
             },
@@ -123,6 +149,12 @@ function NoteManager:init()
 end
 
 function NoteManager:createNote()
+    local x, y, z = pos2xyz(df.global.cursor)
+    if x == nil then
+        print('Enable keyboard cursor to add a note.')
+        return
+    end
+
     local name = self.subviews.name:getText()
     local comment = self.subviews.comment:getText()
 
@@ -133,12 +165,6 @@ function NoteManager:createNote()
 
     local waypoints = df.global.plotinfo.waypoints
     local notes = df.global.plotinfo.waypoints.points
-
-    local x, y, z = pos2xyz(df.global.cursor)
-    if x == nil then
-        print('Enable keyboard cursor to add a note.')
-        return
-    end
 
     notes:insert("#", {
         new=true,
@@ -152,6 +178,26 @@ function NoteManager:createNote()
         pos=xyz2pos(x, y, z)
     })
     waypoints.next_point_id = waypoints.next_point_id + 1
+    self:dismiss()
+end
+
+function NoteManager:saveNote()
+    if self.note == nil then
+        return
+    end
+
+    local name = self.subviews.name:getText()
+    local comment = self.subviews.comment:getText()
+
+    if #name == 0 then
+        print('Note need at least a name')
+        return
+    end
+
+    local notes = df.global.plotinfo.waypoints.points
+    self.note.name = name
+    self.note.comment = comment
+
     self:dismiss()
 end
 
