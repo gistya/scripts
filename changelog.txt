@@ -36,6 +36,7 @@ Template for new versions:
 - `caravan`: If you have managed to select an item that is ethically unacceptable to the merchant, an "Ethics warning" badge will now appear next to the "Trade" button. Clicking on the badge will show you which items that you have selected are problematic. The dialog has a button that you can click to deselect the problematic items in the trade list.
 - `confirm`: If you have ethically unacceptable items selected for trade, the "Are you sure you want to trade" confirmation will warn you about them
 - `quickfort`: ``#zone`` blueprints now integrated with `preserve-rooms` so you can create a zone and automatically assign it to a noble or administrative role
+- `position`: option to copy cursor position to clipboard
 
 ## Fixes
 - `timestream`: ensure child growth events (e.g. becoming an adult) are not skipped
@@ -46,6 +47,7 @@ Template for new versions:
 - `gui/sitemap`: show whether a unit is friendly, hostile, or wild
 - `gui/sitemap`: show whether a unit is caged
 - `gui/control-panel`: include option for turning off dumping of old clothes for `tailor`, for players who have magma pit dumps and want to save old clothes from being dumped into the magma
+- `position`: report current historical era (e.g., "Age of Myth")
 
 ## Removed
 
