@@ -1,3 +1,19 @@
+
+local cursor = df.global.cursor
+local args = {...}
+if #args > 0 then --Copy keyboard cursor to clipboard
+    if #args > 1 then
+        qerror('Too many arguments!')
+    elseif args[1] ~= '-c' and args[1] ~= '--copy' then
+        qerror('Invalid argument "'..args[1]..'"!')
+    elseif cursor.x < 0 then
+        qerror('No keyboard cursor!')
+    end
+
+    dfhack.internal.setClipboardTextCp437(('%d,%d,%d'):format(cursor.x, cursor.y, cursor.z))
+    return
+end
+
 local months = {
     'Granite, in early Spring.',
     'Slate, in mid Spring.',
@@ -30,11 +46,15 @@ print('Time:')
 print('    The time is '..string.format('%02d:%02d:%02d', hour, minute, second))
 print('    The date is '..string.format('%05d-%02d-%02d', df.global.cur_year, month, day))
 print('    It is the month of '..months[month])
---TODO:  print('    It is the Age of '..age_name)
+
+local eras = df.global.world.history.eras
+if #eras > 0 then
+    print('    It is the '..eras[#eras-1].title.name..'.')
+end
 
 print('Place:')
 print('    The z-level is z='..df.global.window_z)
-print('    The cursor is at x='..df.global.cursor.x..', y='..df.global.cursor.y)
+print('    The cursor is at x='..cursor.x..', y='..cursor.y)
 print('    The window is '..df.global.gps.dimx..' tiles wide and '..df.global.gps.dimy..' tiles high')
 if df.global.gps.mouse_x == -1 then print('    The mouse is not in the DF window') else
 print('    The mouse is at x='..df.global.gps.mouse_x..', y='..df.global.gps.mouse_y..' within the window') end
