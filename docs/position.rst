@@ -9,7 +9,7 @@ This tool reports the current date, clock time, month, season, and historical
 era. It also reports the keyboard cursor position (or just the z-level if no
 active cursor), window size, and mouse location on the screen.
 
-Can also be used to copy the current cursor position for later use.
+Can also be used to copy the current keyboard cursor position for later use.
 
 Usage
 -----
