@@ -345,8 +345,8 @@ function hackWish(accessors, opts)
             table.insert(items, createCorpsePiece(unit, bodypart, partlayerID, matindex, casteId, corpsepieceGeneric))
         else
             local mat = typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] and {matindex, casteId} or {mattype, matindex}
-            for _,item in ipairs(createItem(mat, {itemtype, itemsubtype}, quality, unit, description, 1)) do 
-                table.insert(items, item) 
+            for _,item in ipairs(createItem(mat, {itemtype, itemsubtype}, quality, unit, description, 1)) do
+                table.insert(items, item)
             end
         end
     end
