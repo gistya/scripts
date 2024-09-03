@@ -49,6 +49,9 @@ Template for new versions:
 - `gui/control-panel`: include option for turning off dumping of old clothes for `tailor`, for players who have magma pit dumps and want to save old clothes from being dumped into the magma
 - `position`: report current historical era (e.g., "Age of Myth")
 
+## Documentation
+- `gui/embark-anywhere`: add information about how the game determines world tile pathability and instructions for bridging two landmasses
+
 ## Removed
 
 # 50.13-r4
