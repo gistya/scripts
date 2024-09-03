@@ -335,27 +335,18 @@ function hackWish(accessors, opts)
         until count
     end
     if not mattype or not itemtype then return end
-    if not typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] and df.item_type.attrs[itemtype].is_stackable then
-        return createItem({mattype, matindex}, {itemtype, itemsubtype}, quality, unit, description, count)
-    end
-    if typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] and df.item_type.attrs[itemtype].is_stackable then
-        return createItem({matindex, casteId}, {itemtype, itemsubtype}, quality, unit, description, count)
+    if df.item_type.attrs[itemtype].is_stackable then
+        local mat = typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] and {matindex, casteId} or {mattype, matindex}
+        return createItem(mat, {itemtype, itemsubtype}, quality, unit, description, count)
     end
     local items = {}
     for _ = 1,count do
         if itemtype == df.item_type.CORPSEPIECE or itemtype == df.item_type.CORPSE then
             table.insert(items, createCorpsePiece(unit, bodypart, partlayerID, matindex, casteId, corpsepieceGeneric))
         else
-            if typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] then
-                for
-                    _,item in ipairs(createItem({matindex, casteId}, {itemtype, itemsubtype}, quality, unit, description, 1)) do
-                        table.insert(items, item)
-                end
-            else
-                for
-                    _,item in ipairs(createItem({mattype, matindex}, {itemtype, itemsubtype}, quality, unit, description, 1)) do
-                    table.insert(items, item)
-                end
+            local mat = typesThatUseCreaturesExceptCorpses[df.item_type[itemtype]] and {matindex, casteId} or {mattype, matindex}
+            for _,item in ipairs(createItem(mat, {itemtype, itemsubtype}, quality, unit, description, 1)) do 
+                table.insert(items, item) 
             end
         end
     end
