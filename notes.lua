@@ -20,6 +20,8 @@ NotesOverlay.ATTRS{
 
 function NotesOverlay:init()
     self.notes = {}
+    self.note_manager = nil
+    self.last_click_pos = {}
     self:reloadVisibleNotes()
 end
 
@@ -27,27 +29,58 @@ function NotesOverlay:overlay_onupdate()
     self:reloadVisibleNotes()
 end
 
-function NotesOverlay:overlay_trigger()
-    print('called')
-    -- self:reloadVisibleNotes()
+function NotesOverlay:overlay_trigger(args)
+    return self:showNoteManager()
 end
-
 
 function NotesOverlay:onInput(keys)
     if keys._MOUSE_L then
         local pos = dfhack.gui.getMousePos()
 
-        local notes = df.global.plotinfo.waypoints.points
-        for _, note in pairs(notes) do
-            if same_xyz(note.pos, pos) then
-                NoteManager{
-                    note=note,
-                    on_update=function() self:reloadVisibleNotes() end
-                }:show()
-            end
+        local note = self:clickedNote(pos)
+        if note ~= nil then
+            self:showNoteManager(note)
         end
-
     end
+end
+
+function NotesOverlay:clickedNote(click_pos)
+    local pos_curr_note = same_xyz(self.last_click_pos, click_pos)
+        and self.note_manager
+        and self.note_manager.note
+        or nil
+
+    self.last_click_pos = click_pos
+
+    local notes = df.global.plotinfo.waypoints.points
+
+    local last_note_on_pos = nil
+    local first_note_on_pos = nil
+    for _, note in pairs(notes) do
+        if same_xyz(note.pos, click_pos) then
+            if last_note_on_pos == pos_curr_note then
+                return note
+            end
+
+            first_note_on_pos = first_note_on_pos or note
+            last_note_on_pos = note
+        end
+    end
+
+    return first_note_on_pos
+end
+
+function NotesOverlay:showNoteManager(note)
+    if self.note_manager ~= nil then
+        self.note_manager:dismiss()
+    end
+
+    self.note_manager = NoteManager{
+        note=note,
+        on_update=function() self:reloadVisibleNotes() end
+    }
+
+    return self.note_manager:show()
 end
 
 function NotesOverlay:viewportChanged()
@@ -70,9 +103,9 @@ function NotesOverlay:onRenderFrame(dc)
     local texpos = dfhack.textures.getTexposByHandle(green_pin[1])
     dc:pen({fg=COLOR_BLACK, bg=COLOR_LIGHTCYAN, tile=texpos})
 
-    for _, point in pairs(self.notes) do
+    for _, note in pairs(self.notes) do
         dc
-            :seek(point.pos.x, point.pos.y)
+            :seek(note.screen_pos.x, note.screen_pos.y)
             :char('N')
     end
 
@@ -80,7 +113,6 @@ function NotesOverlay:onRenderFrame(dc)
 end
 
 function NotesOverlay:reloadVisibleNotes()
-    print('reloading notes')
     self.notes = {}
 
     local viewport = guidm.Viewport.get()
@@ -94,9 +126,8 @@ function NotesOverlay:reloadVisibleNotes()
         if viewport:isVisible(point.pos) then
             local pos = viewport:tileToScreen(point.pos)
             table.insert(self.notes, {
-                name=point.name,
-                comment=point.comment,
-                pos=pos
+                point=point,
+                screen_pos=pos
             })
         end
     end
@@ -261,6 +292,10 @@ function NoteManager:deleteNote()
     self:dismiss()
 end
 
+function NoteManager:onDismiss()
+    self.note = nil
+end
+
 -- register widgets
 OVERLAY_WIDGETS = {
     map_notes=NotesOverlay
@@ -278,7 +313,7 @@ local function main(args)
             return
         end
 
-        return NoteManager{}:show()
+        return dfhack.internal.runCommand('overlay trigger notes.map_notes')
     end
 end
 
