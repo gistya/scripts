@@ -17,6 +17,10 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `gui/create-item`: fix items of type "VERMIN", "PET", "REMANS", "FISH", "RAW FISH", and "EGG" no longer spawn creature item "nothing."
+Items will now spawn correctly, and will be of the creature type and creature caste that selected by the user. Items of these  types will also stack correctly when needed.
+- `modtools/create-item`:  fix items of type "VERMIN", "PET", "REMANS", "FISH", "RAW FISH", and "EGG" no longer spawn creature item "nothing"s.
+Items will now spawn correctly, and will be of the creature type and creature caste that selected by the user. Items of these  types will also stack correctly when needed.
 
 ## Misc Improvements
 
