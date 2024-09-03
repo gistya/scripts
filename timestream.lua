@@ -319,7 +319,7 @@ local function adjust_activities(timeskip)
             elseif df.activity_event_writest:is_instance(ev) then
                 decrement_counter(ev, 'timer', timeskip)
             elseif df.activity_event_copy_written_contentst:is_instance(ev) then
-                decrement_counter(ev, 'time_left', timeskip)
+                decrement_counter(ev, 'timer', timeskip)
             elseif df.activity_event_make_believest:is_instance(ev) then
                 decrement_counter(ev, 'time_left', timeskip)
             elseif df.activity_event_play_with_toyst:is_instance(ev) then

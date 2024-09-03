@@ -1,6 +1,14 @@
+local argparse = require("argparse")
+
+local quiet = false
+
 local emptied = 0
 local in_building = 0
 local water_type = dfhack.matinfo.find('WATER').type
+
+argparse.processArgsGetopt({...}, {
+    {'q', 'quiet', handler=function() quiet = true end},
+})
 
 for _,item in ipairs(df.global.world.items.other.IN_PLAY) do
     local container = dfhack.items.getContainer(item)
@@ -19,7 +27,9 @@ for _,item in ipairs(df.global.world.items.other.IN_PLAY) do
     end
 end
 
-print('Emptied '..emptied..' buckets.')
-if emptied > 0 then
-    print(('Unclogged %d wells.'):format(in_building))
+if not quiet then
+    print('Emptied '..emptied..' buckets.')
+    if emptied > 0 then
+        print(('Unclogged %d wells.'):format(in_building))
+    end
 end

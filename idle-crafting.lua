@@ -134,7 +134,7 @@ end
 
 local function checkForWorkshop()
     if not next(allowed) then
-        print('no available workshops, disabling')
+        -- print('no available workshops, disabling')
         stop()
     end
 end
@@ -191,10 +191,10 @@ local function processUnit(workshop, idx, unit_id)
         watched[idx][unit_id] = nil
         return false
     elseif not canAccessWorkshop(unit, workshop) then
-        dfhack.print('-')
+        -- dfhack.print('-')
         return false
     elseif not unitIsAvailable(unit) then
-        dfhack.print('.')
+        -- dfhack.print('.')
         return false
     end
     -- We have an available unit
@@ -205,10 +205,9 @@ local function processUnit(workshop, idx, unit_id)
     if not success and workshop.profile.blocked_labors[BONE_CARVE] == false then
         success = makeBoneCraft(unit, workshop)
     end
-    local name = (dfhack.TranslateName(dfhack.units.getVisibleName(unit)))
     if success then
         -- Why is the encoding still wrong, even when using df2console?
-        print(' assigned ' .. dfhack.df2console(name))
+        print('idle-crafting: assigned crafting job to ' .. dfhack.df2console(dfhack.units.getReadableName(unit)))
         watched[idx][unit_id] = nil
         allowed[workshop.id] = df.global.world.frame_counter
     else
@@ -239,7 +238,7 @@ local function unit_loop()
         local workshop = locateWorkshop(workshop_id)
         -- workshop may have been destroyed, assigned a master, or does not allow crafting
         if not workshop or invalidProfile(workshop) then
-            print('workshop destroyed or has invalid profile')
+            -- print('workshop destroyed or has invalid profile')
             allowed[workshop_id] = nil --clearing during iteration is permitted
             goto next_workshop
         end
@@ -251,14 +250,14 @@ local function unit_loop()
 
         -- check that we didn't schedule a job on the last iteration
         if (last_job_frame >= 0) and (current_frame < last_job_frame + 60) then
-            print(('idle-crafting: disabling failing workshop (%d) until the next run of main loop'):
-                format(workshop_id))
+            -- print(('idle-crafting: disabling failing workshop (%d) until the next run of main loop'):
+            --     format(workshop_id))
             failing[workshop_id] = true
             goto next_workshop
         end
 
-        dfhack.print(('idle-crafting: locating crafter for %s (%d)'):
-            format(dfhack.buildings.getName(workshop), workshop_id))
+        -- dfhack.print(('idle-crafting: locating crafter for %s (%d)'):
+        --     format(dfhack.buildings.getName(workshop), workshop_id))
 
         -- workshop is free to use, try to find a unit
         for idx, _ in ipairs(thresholds) do
@@ -267,10 +266,10 @@ local function unit_loop()
                     goto next_workshop
                 end
             end
-            dfhack.print('/')
+            -- dfhack.print('/')
         end
 
-        print('no unit found')
+        -- print('no unit found')
         ::next_workshop::
     end
     -- disable loop if there are no more units
@@ -283,7 +282,7 @@ local function unit_loop()
 end
 
 local function main_loop()
-    print('idle crafting: running main loop')
+    -- print('idle crafting: running main loop')
     checkForWorkshop()
     if not enabled then
         return
@@ -315,9 +314,9 @@ local function main_loop()
         end
         ::continue::
     end
-    print(('watching %s dwarfs with crafting needs'):format(
-        table.concat(num_watched, '/')
-    ))
+    -- print(('watching %s dwarfs with crafting needs'):format(
+    --     table.concat(num_watched, '/')
+    -- ))
 
     if watching then
         repeatutil.scheduleUnlessAlreadyScheduled(GLOBAL_KEY .. 'unit', 53, 'ticks', unit_loop)
@@ -361,23 +360,32 @@ IdleCraftingOverlay.ATTRS {
     viewscreens = {
         'dwarfmode/ViewSheets/BUILDING/Workshop/Craftsdwarfs/Workers',
     },
-    frame = { w = 55, h = 1 },
+    frame = { w = 54, h = 1 },
 }
 
 function IdleCraftingOverlay:init()
     self:addviews {
-        widgets.CycleHotkeyLabel {
-            view_id = 'leisure_toggle',
-            frame = { l = 0, t = 0 },
-            label = 'Allow idle dwarves to satisfy crafting needs:',
-            key = 'CUSTOM_I',
-            options = {
-                { label = 'yes', value = true, pen = COLOR_GREEN },
-                { label = 'no',  value = false },
+        widgets.BannerPanel{
+            subviews={
+                widgets.CycleHotkeyLabel {
+                    view_id = 'leisure_toggle',
+                    frame = { t=0, l = 1, r = 1 },
+                    label = 'Allow idle dwarves to satisfy crafting needs:',
+                    key = 'CUSTOM_I',
+                    options = {
+                        { label = 'yes', value = true, pen = COLOR_GREEN },
+                        { label = 'no',  value = false },
+                    },
+                    initial_option = 'no',
+                    on_change = self:callback('onClick'),
+                    enabled = function()
+                        local bld = dfhack.gui.getSelectedBuilding(true)
+                        if not bld then return end
+                        return not invalidProfile(bld)
+                    end,
+                }
             },
-            initial_option = 'no',
-            on_change = self:callback('onClick'),
-        }
+        },
     }
 end
 
@@ -414,14 +422,12 @@ if dfhack_flags.module then
 end
 
 if df.global.gamemode ~= df.game_mode.DWARF then
-    print('this tool requires a loaded fort')
-    return
+    qerror('this tool requires a loaded fort')
 end
 
 if dfhack_flags.enable then
     if dfhack_flags.enable_state then
-        print('This tool is enabled by permitting idle crafting at a Craftsdarf\'s workshop')
-        return
+        qerror('This tool is enabled by permitting idle crafting at a Craftsdarf\'s workshop')
     else
         allowed = {}
         stop()
