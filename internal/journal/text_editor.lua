@@ -234,7 +234,7 @@ function TextEditor:onInput(keys)
         return self.subviews.scrollbar:onInput(keys)
     end
 
-    if keys._MOUSE_L then
+    if keys._MOUSE_L and self:getMousePos() then
         self:setFocus(true)
     end
 
