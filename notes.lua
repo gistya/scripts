@@ -7,24 +7,31 @@ local overlay = require('plugins.overlay')
 local guidm = require('gui.dwarfmode')
 local text_editor = reqscript('internal/journal/text_editor')
 
--- local green_pin = dfhack.textures.loadTileset('hack/data/art/green-pin.png', 8, 12, true),
-
--- NotesView = defclass(NotesView, gui.View)
--- NotesView.ATTRS{}
+local green_pin = dfhack.textures.loadTileset('hack/data/art/note-green-pin.png', 32, 32, true)
 
 NotesOverlay = defclass(NotesOverlay, overlay.OverlayWidget)
 NotesOverlay.ATTRS{
     desc='Render map notes.',
     viewscreens='dwarfmode',
     default_enabled=true,
-    -- TODO increase to 30 seconds
-    overlay_onupdate_max_freq_seconds=1,
-    hotspot=true,
+    overlay_onupdate_max_freq_seconds=30,
     fullscreen=true,
 }
 
 function NotesOverlay:init()
+    self.notes = {}
+    self:reloadVisibleNotes()
 end
+
+function NotesOverlay:overlay_onupdate()
+    self:reloadVisibleNotes()
+end
+
+function NotesOverlay:overlay_trigger()
+    print('called')
+    -- self:reloadVisibleNotes()
+end
+
 
 function NotesOverlay:onInput(keys)
     if keys._MOUSE_L then
@@ -33,11 +40,20 @@ function NotesOverlay:onInput(keys)
         local notes = df.global.plotinfo.waypoints.points
         for _, note in pairs(notes) do
             if same_xyz(note.pos, pos) then
-                return NoteManager{note=note}:show()
+                NoteManager{
+                    note=note,
+                    on_update=function() self:reloadVisibleNotes() end
+                }:show()
             end
         end
 
     end
+end
+
+function NotesOverlay:viewportChanged()
+    return self.viewport_pos.x ~=  df.global.window_x or
+        self.viewport_pos.y ~=  df.global.window_y or
+        self.viewport_pos.z ~=  df.global.window_z
 end
 
 function NotesOverlay:onRenderFrame(dc)
@@ -45,25 +61,45 @@ function NotesOverlay:onRenderFrame(dc)
         return
     end
 
+    if self:viewportChanged() then
+        self:reloadVisibleNotes()
+    end
+
     dc:map(true)
-    -- local texpos = dfhack.textures.getTexposByHandle(green_pin[1])
-    local texpos = textures.tp_green_pin(1)
-    local color, ch = COLOR_RED, 'X'
-    dc:pen({ch='X', fg=COLOR_GREEN, bg=COLOR_BLACK, tile=texpos})
+
+    local texpos = dfhack.textures.getTexposByHandle(green_pin[1])
+    dc:pen({fg=COLOR_BLACK, bg=COLOR_LIGHTCYAN, tile=texpos})
+
+    for _, point in pairs(self.notes) do
+        dc
+            :seek(point.pos.x, point.pos.y)
+            :char('N')
+    end
+
+    dc:map(false)
+end
+
+function NotesOverlay:reloadVisibleNotes()
+    print('reloading notes')
+    self.notes = {}
 
     local viewport = guidm.Viewport.get()
+    self.viewport_pos = {
+        x=df.global.window_x,
+        y=df.global.window_y,
+        z=df.global.window_z
+    }
 
     for _, point in ipairs(df.global.plotinfo.waypoints.points) do
         if viewport:isVisible(point.pos) then
             local pos = viewport:tileToScreen(point.pos)
-            dc
-                :seek(pos.x, pos.y)
-                :tile()
+            table.insert(self.notes, {
+                name=point.name,
+                comment=point.comment,
+                pos=pos
+            })
         end
     end
-
-    dc:map(false)
-
 end
 
 NoteManager = defclass(NoteManager, gui.ZScreen)
@@ -71,6 +107,7 @@ NoteManager.ATTRS{
     focus_path='hotspot/menu',
     hotspot_frame=DEFAULT_NIL,
     note=DEFAULT_NIL,
+    on_update=DEFAULT_NIL,
 }
 
 function NoteManager:init()
@@ -129,17 +166,12 @@ function NoteManager:init()
                             on_activate=function() self:createNote() end,
                             enabled=function() return #self.subviews.name:getText() > 0 end,
                         },
-                        widgets.TextButton{
-                            view_id='cancel',
-                            frame={h=1},
-                            label='Cancel',
-                            key='LEAVESCREEN'
-                        },
                         edit_mode and widgets.TextButton{
                             view_id='delete',
                             frame={h=1},
                             label='Delete',
                             key='CUSTOM_ALT_D',
+                            on_activate=function() self:deleteNote() end,
                         } or nil,
                     }
                 }
@@ -178,6 +210,11 @@ function NoteManager:createNote()
         pos=xyz2pos(x, y, z)
     })
     waypoints.next_point_id = waypoints.next_point_id + 1
+
+    if self.on_update then
+        self.on_update()
+    end
+
     self:dismiss()
 end
 
@@ -197,6 +234,29 @@ function NoteManager:saveNote()
     local notes = df.global.plotinfo.waypoints.points
     self.note.name = name
     self.note.comment = comment
+
+    if self.on_update then
+        self.on_update()
+    end
+
+    self:dismiss()
+end
+
+function NoteManager:deleteNote()
+    if self.note == nil then
+        return
+    end
+
+    for ind, note in pairs(df.global.plotinfo.waypoints.points) do
+        if note == self.note then
+            df.global.plotinfo.waypoints.points:erase(ind)
+            break
+        end
+    end
+
+    if self.on_update then
+        self.on_update()
+    end
 
     self:dismiss()
 end
