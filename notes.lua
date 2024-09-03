@@ -18,7 +18,7 @@ NotesOverlay.ATTRS{
 }
 
 local waypoints = df.global.plotinfo.waypoints
-local map_notes = df.global.plotinfo.waypoints.points
+local map_points = df.global.plotinfo.waypoints.points
 
 function NotesOverlay:init()
     self.notes = {}
@@ -59,9 +59,11 @@ function NotesOverlay:clickedNote(click_pos)
 
     local last_note_on_pos = nil
     local first_note_on_pos = nil
-    for _, note in ipairs(map_notes) do
-        if same_xyz(note.pos, click_pos) then
-            if last_note_on_pos == pos_curr_note then
+    for _, note in ipairs(self.notes) do
+        if same_xyz(note.point.pos, click_pos) then
+            if (last_note_on_pos and pos_curr_note
+                and last_note_on_pos.point.id == pos_curr_note.point.id
+            ) then
                 return note
             end
 
@@ -125,12 +127,12 @@ function NotesOverlay:reloadVisibleNotes()
         z=df.global.window_z
     }
 
-    for _, point in ipairs(map_notes) do
-        if viewport:isVisible(point.pos) then
-            local pos = viewport:tileToScreen(point.pos)
+    for _, map_point in ipairs(map_points) do
+        if viewport:isVisible(map_point.pos) then
+            local screen_pos = viewport:tileToScreen(map_point.pos)
             table.insert(self.notes, {
-                point=point,
-                screen_pos=pos
+                point=map_point,
+                screen_pos=screen_pos
             })
         end
     end
@@ -161,7 +163,7 @@ function NoteManager:init()
                     view_id='name',
                     frame={t=1,h=3},
                     frame_style=gui.FRAME_INTERIOR,
-                    init_text=self.note and self.note.name or ''
+                    init_text=self.note and self.note.point.name or ''
                 },
                 widgets.HotkeyLabel {
                     key='CUSTOM_ALT_C',
@@ -173,7 +175,7 @@ function NoteManager:init()
                     view_id='comment',
                     frame={t=6,b=3},
                     frame_style=gui.FRAME_INTERIOR,
-                    init_text=self.note and self.note.comment or ''
+                    init_text=self.note and self.note.point.comment or ''
                 },
                 widgets.Panel{
                     view_id='buttons',
@@ -228,8 +230,7 @@ function NoteManager:createNote()
         return
     end
 
-
-    map_notes:insert("#", {
+    map_points:insert("#", {
         new=true,
 
         id = waypoints.next_point_id,
@@ -262,8 +263,8 @@ function NoteManager:saveNote()
         return
     end
 
-    self.note.name = name
-    self.note.comment = comment
+    self.note.point.name = name
+    self.note.point.comment = comment
 
     if self.on_update then
         self.on_update()
@@ -277,9 +278,9 @@ function NoteManager:deleteNote()
         return
     end
 
-    for ind, note in pairs(map_notes) do
-        if note.id == self.note.id then
-            map_notes:erase(ind)
+    for ind, map_point in pairs(map_points) do
+        if map_point.id == self.note.point.id then
+            map_points:erase(ind)
             break
         end
     end
