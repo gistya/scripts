@@ -163,7 +163,8 @@ function NoteManager:init()
                     view_id='name',
                     frame={t=1,h=3},
                     frame_style=gui.FRAME_INTERIOR,
-                    init_text=self.note and self.note.point.name or ''
+                    init_text=self.note and self.note.point.name or '',
+                    init_cursor=1
                 },
                 widgets.HotkeyLabel {
                     key='CUSTOM_ALT_C',
@@ -175,7 +176,8 @@ function NoteManager:init()
                     view_id='comment',
                     frame={t=6,b=3},
                     frame_style=gui.FRAME_INTERIOR,
-                    init_text=self.note and self.note.point.comment or ''
+                    init_text=self.note and self.note.point.comment or '',
+                    init_cursor=1
                 },
                 widgets.Panel{
                     view_id='buttons',
