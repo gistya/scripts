@@ -131,7 +131,9 @@ function NotesOverlay:reloadVisibleNotes()
     }
 
     for _, map_point in ipairs(map_points) do
-        if viewport:isVisible(map_point.pos) then
+        if (viewport:isVisible(map_point.pos)
+            and map_point.name ~= nil and #map_point.name > 0)
+        then
             local screen_pos = viewport:tileToScreen(map_point.pos)
             table.insert(self.visible_notes, {
                 point=map_point,
