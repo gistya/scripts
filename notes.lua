@@ -21,7 +21,7 @@ local waypoints = df.global.plotinfo.waypoints
 local map_points = df.global.plotinfo.waypoints.points
 
 function NotesOverlay:init()
-    self.notes = {}
+    self.visible_notes = {}
     self.note_manager = nil
     self.last_click_pos = {}
     self:reloadVisibleNotes()
@@ -40,6 +40,9 @@ function NotesOverlay:onInput(keys)
         local top_most_screen = dfhack.gui.getDFViewscreen(true)
         if dfhack.gui.matchFocusString('dwarfmode/Default', top_most_screen) then
             local pos = dfhack.gui.getMousePos()
+            if pos == nil then
+                return false
+            end
 
             local note = self:clickedNote(pos)
             if note ~= nil then
@@ -59,7 +62,7 @@ function NotesOverlay:clickedNote(click_pos)
 
     local last_note_on_pos = nil
     local first_note_on_pos = nil
-    for _, note in ipairs(self.notes) do
+    for _, note in ipairs(self.visible_notes) do
         if same_xyz(note.point.pos, click_pos) then
             if (last_note_on_pos and pos_curr_note
                 and last_note_on_pos.point.id == pos_curr_note.point.id
@@ -108,7 +111,7 @@ function NotesOverlay:onRenderFrame(dc)
     local texpos = dfhack.textures.getTexposByHandle(green_pin[1])
     dc:pen({fg=COLOR_BLACK, bg=COLOR_LIGHTCYAN, tile=texpos})
 
-    for _, note in pairs(self.notes) do
+    for _, note in pairs(self.visible_notes) do
         dc
             :seek(note.screen_pos.x, note.screen_pos.y)
             :char('N')
@@ -118,7 +121,7 @@ function NotesOverlay:onRenderFrame(dc)
 end
 
 function NotesOverlay:reloadVisibleNotes()
-    self.notes = {}
+    self.visible_notes = {}
 
     local viewport = guidm.Viewport.get()
     self.viewport_pos = {
@@ -130,7 +133,7 @@ function NotesOverlay:reloadVisibleNotes()
     for _, map_point in ipairs(map_points) do
         if viewport:isVisible(map_point.pos) then
             local screen_pos = viewport:tileToScreen(map_point.pos)
-            table.insert(self.notes, {
+            table.insert(self.visible_notes, {
                 point=map_point,
                 screen_pos=screen_pos
             })
@@ -152,11 +155,13 @@ function NoteManager:init()
         widgets.Window{
             frame={w=35,h=20},
             frame_inset={t=1},
+            resizable=true,
             subviews={
                 widgets.HotkeyLabel {
                     key='CUSTOM_ALT_N',
                     label='Name',
-                    frame={t=0},
+                    frame={l=0,t=0},
+                    auto_width=true,
                     on_activate=function() self.subviews.name:setFocus(true) end,
                 },
                 text_editor.TextEditor{
@@ -169,7 +174,8 @@ function NoteManager:init()
                 widgets.HotkeyLabel {
                     key='CUSTOM_ALT_C',
                     label='Comment',
-                    frame={t=5},
+                    frame={l=0,t=5},
+                    auto_width=true,
                     on_activate=function() self.subviews.comment:setFocus(true) end,
                 },
                 text_editor.TextEditor{
@@ -181,12 +187,13 @@ function NoteManager:init()
                 },
                 widgets.Panel{
                     view_id='buttons',
-                    frame={b=0,h=2},
-                    autoarrange_subviews=true,
+                    frame={b=0,h=1},
+                    frame_inset={l=1,r=1},
                     subviews={
                         widgets.HotkeyLabel{
                             view_id='Save',
-                            frame={h=1},
+                            frame={l=0,t=0,h=1},
+                            auto_width=true,
                             label='Save',
                             key='CUSTOM_ALT_S',
                             visible=edit_mode,
@@ -195,7 +202,8 @@ function NoteManager:init()
                         },
                         widgets.HotkeyLabel{
                             view_id='Create',
-                            frame={h=1},
+                            frame={l=0,t=0,h=1},
+                            auto_width=true,
                             label='Create',
                             key='CUSTOM_ALT_S',
                             visible=not edit_mode,
@@ -204,7 +212,8 @@ function NoteManager:init()
                         },
                         widgets.HotkeyLabel{
                             view_id='delete',
-                            frame={h=1},
+                            frame={r=0,t=0,h=1},
+                            auto_width=true,
                             label='Delete',
                             key='CUSTOM_ALT_D',
                             visible=edit_mode,
@@ -220,7 +229,7 @@ end
 function NoteManager:createNote()
     local cursor_pos = guidm.getCursorPos()
     if cursor_pos == nil then
-        print('Enable keyboard cursor to add a note.')
+        dfhack.printerr('Enable keyboard cursor to add a note.')
         return
     end
 
