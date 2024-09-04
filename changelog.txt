@@ -44,10 +44,8 @@ Template for new versions:
 - `gui/design`: don't overcount "affected tiles" for Line & Freeform drawing tools
 - `deep-embark`: fix error when embarking where there is no land to stand on (e.g. when embarking in the ocean with `gui/embark-anywhere`
 - `deep-embark`: fix failure to transport units and items when embarking where there is no room to spawn the starting wagon
-- `gui/create-item`: fix items of type "VERMIN", "PET", "REMANS", "FISH", "RAW FISH", and "EGG" no longer spawn creature item "nothing."
-Items will now spawn correctly, and will be of the creature type and creature caste that selected by the user. Items of these  types will also stack correctly when needed.
-- `modtools/create-item`:  fix items of type "VERMIN", "PET", "REMANS", "FISH", "RAW FISH", and "EGG" no longer spawn creature item "nothing"s.
-Items will now spawn correctly, and will be of the creature type and creature caste that selected by the user. Items of these  types will also stack correctly when needed.
+- `gui/create-item`: fix items of type "VERMIN", "PET", "REMANS", "FISH", "RAW FISH", and "EGG" no longer spawn creature item "nothing." Items will now spawn correctly, and will be of the creature type and creature caste that selected by the user. Items of these  types will also stack correctly when needed.
+- `modtools/create-item`:  fix items of type "VERMIN", "PET", "REMANS", "FISH", "RAW FISH", and "EGG" no longer spawn creature item "nothing"s. Items will now spawn correctly, and will be of the creature type and creature caste that selected by the user. Items of these  types will also stack correctly when needed.
 
 ## Misc Improvements
 - `gui/sitemap`: show whether a unit is friendly, hostile, or wild
