@@ -46,6 +46,8 @@ Items will now spawn correctly, and will be of the creature type and creature ca
 - `timestream`: ensure child growth events (e.g. becoming an adult) are not skipped
 - `empty-bin`: ``--liquids`` option now correctly empties containers filled with LIQUID_MISC (like lye)
 - `gui/design`: don't overcount "affected tiles" for Line & Freeform drawing tools
+- `deep-embark`: fix error when embarking where there is no land to stand on (e.g. when embarking in the ocean with `gui/embark-anywhere`
+- `deep-embark`: fix failure to transport units and items when embarking where there is no room to spawn the starting wagon
 
 ## Misc Improvements
 - `gui/sitemap`: show whether a unit is friendly, hostile, or wild
