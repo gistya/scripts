@@ -123,8 +123,7 @@ function TextEditor:init()
             view_id='scrollbar',
             frame={r=0,t=1},
             on_scroll=self:callback('onScrollbar')
-        },
-        widgets.HelpButton{command="gui/journal", frame={r=0,t=0}}
+        }
     }
     self:setFocus(true)
 end
