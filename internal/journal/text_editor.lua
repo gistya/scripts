@@ -94,6 +94,7 @@ TextEditor.ATTRS{
     select_pen = COLOR_CYAN,
     on_text_change = DEFAULT_NIL,
     on_cursor_change = DEFAULT_NIL,
+    one_line_mode = false,
     debug = false
 }
 
@@ -104,25 +105,27 @@ function TextEditor:init()
         TextEditorView{
             view_id='text_area',
             frame={l=0,r=3,t=0},
-            text = self.init_text,
+            text=self.init_text,
 
-            text_pen = self.text_pen,
-            ignore_keys = self.ignore_keys,
-            select_pen = self.select_pen,
-            debug = self.debug,
+            text_pen=self.text_pen,
+            ignore_keys=self.ignore_keys,
+            select_pen=self.select_pen,
+            debug=self.debug,
+            one_line_mode=self.one_line_mode,
 
-            on_text_change = function (val)
+            on_text_change=function (val)
                 self:updateLayout()
                 if self.on_text_change then
                     self.on_text_change(val)
                 end
             end,
-            on_cursor_change = self:callback('onCursorChange')
+            on_cursor_change=self:callback('onCursorChange')
         },
         widgets.Scrollbar{
             view_id='scrollbar',
             frame={r=0,t=1},
-            on_scroll=self:callback('onScrollbar')
+            on_scroll=self:callback('onScrollbar'),
+            visible=not self.one_line_mode
         }
     }
     self:setFocus(true)
@@ -251,6 +254,7 @@ TextEditorView.ATTRS{
     on_cursor_change = DEFAULT_NIL,
     enable_cursor_blink = true,
     debug = false,
+    one_line_mode = false,
     history_size = 10,
 }
 
@@ -273,12 +277,22 @@ function TextEditorView:init()
         bold=true
     })
 
+    self.text = self:normalizeText(self.text)
+
     self.wrapped_text = wrapped_text.WrappedText{
         text=self.text,
         wrap_width=256
     }
 
     self.history = TextEditorHistory{history_size=self.history_size}
+end
+
+function TextEditorView:normalizeText(text)
+    if self.one_line_mode then
+        return text:gsub("\r?\n", "")
+    end
+
+    return text
 end
 
 function TextEditorView:setRenderStartLineY(render_start_line_y)
@@ -410,7 +424,7 @@ end
 
 function TextEditorView:setText(text)
     local changed = self.text ~= text
-    self.text = text
+    self.text = self:normalizeText(text)
 
     self:recomputeLines()
 
@@ -782,12 +796,14 @@ end
 function TextEditorView:onTextManipulationInput(keys)
     if keys.SELECT then
         -- handle enter
-        self.history:store(
-            HISTORY_ENTRY.WHITESPACE_BLOCK,
-            self.text,
-            self.cursor
-        )
-        self:insert(NEWLINE)
+        if not self.one_line_mode then
+            self.history:store(
+                HISTORY_ENTRY.WHITESPACE_BLOCK,
+                self.text,
+                self.cursor
+            )
+            self:insert(NEWLINE)
+        end
 
         return true
 

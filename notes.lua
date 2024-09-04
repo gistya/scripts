@@ -7,7 +7,12 @@ local overlay = require('plugins.overlay')
 local guidm = require('gui.dwarfmode')
 local text_editor = reqscript('internal/journal/text_editor')
 
-local green_pin = dfhack.textures.loadTileset('hack/data/art/note-green-pin.png', 32, 32, true)
+local green_pin = dfhack.textures.loadTileset(
+    'hack/data/art/note_green_pin_map.png',
+    32,
+    32,
+    true
+)
 
 NotesOverlay = defclass(NotesOverlay, overlay.OverlayWidget)
 NotesOverlay.ATTRS{
@@ -171,7 +176,8 @@ function NoteManager:init()
                     frame={t=1,h=3},
                     frame_style=gui.FRAME_INTERIOR,
                     init_text=self.note and self.note.point.name or '',
-                    init_cursor=1
+                    init_cursor=1,
+                    one_line_mode=true
                 },
                 widgets.HotkeyLabel {
                     key='CUSTOM_ALT_C',
