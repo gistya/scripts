@@ -51,7 +51,7 @@ Template for new versions:
 - `gui/sitemap`: show whether a unit is friendly, hostile, or wild
 - `gui/sitemap`: show whether a unit is caged
 - `gui/control-panel`: include option for turning off dumping of old clothes for `tailor`, for players who have magma pit dumps and want to save old clothes from being dumped into the magma
-- `position`: report current historical era (e.g., "Age of Myth") and site/adventurer world coords
+- `position`: report current historical era (e.g., "Age of Myth"), site/adventurer world coords, and mouse map tile coords
 
 ## Documentation
 - `gui/embark-anywhere`: add information about how the game determines world tile pathability and instructions for bridging two landmasses

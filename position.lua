@@ -54,31 +54,43 @@ end
 
 print('Place:')
 print('    The z-level is z='..df.global.window_z)
-print('    The cursor is at x='..cursor.x..', y='..cursor.y)
-print('    The window is '..df.global.gps.dimx..' tiles wide and '..df.global.gps.dimy..' tiles high.')
 
-if df.global.gps.mouse_x < 0 then
-    print('    The mouse is not in the DF window.')
+if cursor.x < 0 then
+    print('    The keyboard cursor is inactive.')
 else
-    print('    The mouse is at x='..df.global.gps.mouse_x..', y='..df.global.gps.mouse_y..' within the window.')
+    print('    The keyboard cursor is at x='..cursor.x..', y='..cursor.y)
+end
+
+local x, y = dfhack.screen.getWindowSize()
+print('    The window is '..x..' tiles wide and '..y..' tiles high.')
+
+x, y = dfhack.screen.getMousePos()
+if x then
+    print('    The mouse is at x='..x..', y='..y..' within the window.')
+    local pos = dfhack.gui.getMousePos()
+    if pos then
+        print('    The mouse is over map tile x='..pos.x..', y='..pos.y)
+    end
+else
+    print('    The mouse is not in the DF window.')
 end
 
 local wd = df.global.world.world_data
 local site = dfhack.world.getCurrentSite()
 if site then
-    print(('    The current site is at x=%d, y=%d on the world map (%dx%d).'):
+    print(('    The current site is at x=%d, y=%d on the %dx%d world map.'):
         format(site.pos.x, site.pos.y, wd.world_width, wd.world_height))
 elseif dfhack.world.isAdventureMode() then
-    local ax, ay = -1, -1
+    x, y = -1, -1
     for _,army in ipairs(df.global.world.armies.all) do
         if army.flags.player then
-            ax, ay = army.pos.x // 48, army.pos.y // 48
+            x, y = army.pos.x // 48, army.pos.y // 48
             break
         end
     end
-    if ax < 0 then
-        ax, ay = wd.midmap_data.adv_region_x, wd.midmap_data.adv_region_y
+    if x < 0 then
+        x, y = wd.midmap_data.adv_region_x, wd.midmap_data.adv_region_y
     end
-    print(('    The adventurer is at x=%d, y=%d on the world map (%dx%d).'):
-        format(ax, ay, wd.world_width, wd.world_height))
+    print(('    The adventurer is at x=%d, y=%d on the %dx%d world map.'):
+        format(x, y, wd.world_width, wd.world_height))
 end
