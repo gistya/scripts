@@ -55,6 +55,12 @@ local function assign_minecart_to_route(route, quiet, minecart)
             return false
         end
     end
+    for _,vehicle_id in ipairs(route.vehicle_ids) do
+        local vehicle = utils.binsearch(df.global.world.vehicles.all, vehicle_id, 'id')
+        if vehicle then vehicle.route_id = -1 end
+    end
+    route.vehicle_ids:resize(0)
+    route.vehicle_stops:resize(0)
     route.vehicle_ids:insert('#', minecart.id)
     route.vehicle_stops:insert('#', 0)
     minecart.route_id = route.id
