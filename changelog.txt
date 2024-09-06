@@ -37,22 +37,21 @@ Template for new versions:
 - `caravan`: If you have managed to select an item that is ethically unacceptable to the merchant, an "Ethics warning" badge will now appear next to the "Trade" button. Clicking on the badge will show you which items that you have selected are problematic. The dialog has a button that you can click to deselect the problematic items in the trade list.
 - `confirm`: If you have ethically unacceptable items selected for trade, the "Are you sure you want to trade" confirmation will warn you about them
 - `quickfort`: ``#zone`` blueprints now integrated with `preserve-rooms` so you can create a zone and automatically assign it to a noble or administrative role
-- `position`: option to copy cursor position to clipboard
 
 ## Fixes
-- `timestream`: ensure child growth events (e.g. becoming an adult) are not skipped
+- `timestream`: ensure child growth events (that is, a child's transition to adulthood) are not skipped; existing "overage" children will be automatically fixed within a year
 - `empty-bin`: ``--liquids`` option now correctly empties containers filled with LIQUID_MISC (like lye)
 - `gui/design`: don't overcount "affected tiles" for Line & Freeform drawing tools
-- `deep-embark`: fix error when embarking where there is no land to stand on (e.g. when embarking in the ocean with `gui/embark-anywhere`
+- `deep-embark`: fix error when embarking where there is no land to stand on (e.g. when embarking in the ocean with `gui/embark-anywhere`)
 - `deep-embark`: fix failure to transport units and items when embarking where there is no room to spawn the starting wagon
-- `gui/create-item`: fix items of type "VERMIN", "PET", "REMANS", "FISH", "RAW FISH", and "EGG" no longer spawn creature item "nothing." Items will now spawn correctly, and will be of the creature type and creature caste that selected by the user. Items of these  types will also stack correctly when needed.
-- `modtools/create-item`:  fix items of type "VERMIN", "PET", "REMANS", "FISH", "RAW FISH", and "EGG" no longer spawn creature item "nothing"s. Items will now spawn correctly, and will be of the creature type and creature caste that selected by the user. Items of these  types will also stack correctly when needed.
+- `gui/create-item`, `modtools/create-item`: items of type "VERMIN", "PET", "REMANS", "FISH", "RAW FISH", and "EGG" no longer spawn creature item "nothing" and will now stack correctly
 
 ## Misc Improvements
 - `gui/sitemap`: show whether a unit is friendly, hostile, or wild
 - `gui/sitemap`: show whether a unit is caged
 - `gui/control-panel`: include option for turning off dumping of old clothes for `tailor`, for players who have magma pit dumps and want to save old clothes from being dumped into the magma
 - `position`: report current historical era (e.g., "Age of Myth"), site/adventurer world coords, and mouse map tile coords
+- `position`: option to copy keyboard cursor position to the clipboard
 - `assign-minecarts`: reassign vehicles to routes where the vehicle has been destroyed (or has otherwise gone missing)
 - `fix/dry-buckets`: prompt DF to recheck requests for aid (e.g. "bring water" jobs) when a bucket is unclogged and becomes available for use
 
