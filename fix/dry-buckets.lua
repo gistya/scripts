@@ -28,6 +28,7 @@ for _,item in ipairs(df.global.world.items.other.BUCKET) do
     end
     if emptied_bucket then
         emptied = emptied + 1
+        df.global.plotinfo.flags.recheck_aid_requests = true
     end
     if freed_in_building then
         in_building = in_building + 1
