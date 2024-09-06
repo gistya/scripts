@@ -2,6 +2,7 @@
 --@ module = true
 
 local argparse = require('argparse')
+local utils = require('utils')
 
 function get_free_vehicles()
     local free_vehicles = {}
@@ -13,16 +14,12 @@ function get_free_vehicles()
     return free_vehicles
 end
 
-local function has_minecart(route)
-    return #route.vehicle_ids > 0
-end
-
 local function has_stops(route)
     return #route.stops > 0
 end
 
 local function get_minecart(route)
-    if not has_minecart(route) then return end
+    if #route.vehicle_ids == 0 then return end
     local vehicle = utils.binsearch(df.global.world.vehicles.active, route.vehicle_ids[0], 'id')
     if not vehicle then return end
     return df.item.find(vehicle.item_id)
@@ -37,8 +34,9 @@ local function get_id_and_name(route)
 end
 
 local function assign_minecart_to_route(route, quiet, minecart)
-    if has_minecart(route) then
-        return get_minecart(route)
+    local assigned_minecart = get_minecart(route)
+    if assigned_minecart then
+        return assigned_minecart
     end
     if not has_stops(route) then
         if not quiet then
@@ -99,7 +97,7 @@ local function list()
         for _,route in ipairs(routes) do
             print(('%-8d  %-9s  %-9s  %s')
                   :format(route.id,
-                          has_minecart(route) and 'yes' or 'NO',
+                          get_minecart(route) and 'yes' or 'NO',
                           has_stops(route) and 'yes' or 'NO',
                           get_name(route)))
         end
@@ -113,7 +111,7 @@ local function all(quiet)
     local minecarts, idx = get_free_vehicles(), 1
     local routes = df.global.plotinfo.hauling.routes
     for _,route in ipairs(routes) do
-        if has_minecart(route) then
+        if get_minecart(route) then
             goto continue
         end
         if not assign_minecart_to_route(route, quiet, minecarts[idx]) then
@@ -148,7 +146,7 @@ local function main(args)
         local route = get_route_by_id(requested_route_id)
         if not route then
             dfhack.printerr('route id not found: '..requested_route_id)
-        elseif has_minecart(route) then
+        elseif get_minecart(route) then
             if not quiet then
                 print(('Route %s already has a minecart assigned.')
                     :format(get_id_and_name(route)))
