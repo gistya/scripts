@@ -77,7 +77,7 @@ local function arrange_empty_journal(options)
     gui_journal.main({
         save_prefix='test:',
         save_on_change=options.save_on_change or false,
-        save_layout=options.allow_layout_restore or false
+        save_layout=options.allow_layout_restore or false,
     })
 
     local journal = gui_journal.view
@@ -3068,3 +3068,6 @@ function test.show_tutorials_on_first_use()
     expect.str_find('Section 1\n', read_rendered_text(toc_panel));
     journal:dismiss()
 end
+
+-- TODO: separate journal tests from TextEditor tests
+-- add "one_line_mode" tests
