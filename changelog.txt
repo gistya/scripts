@@ -45,6 +45,8 @@ Template for new versions:
 - `deep-embark`: fix error when embarking where there is no land to stand on (e.g. when embarking in the ocean with `gui/embark-anywhere`)
 - `deep-embark`: fix failure to transport units and items when embarking where there is no room to spawn the starting wagon
 - `gui/create-item`, `modtools/create-item`: items of type "VERMIN", "PET", "REMANS", "FISH", "RAW FISH", and "EGG" no longer spawn creature item "nothing" and will now stack correctly
+- `rejuvenate`: don't set a lifespan limit for creatures that are immortal (e.g. elves, goblins)
+- `rejuvenate`: properly disconnect babies from mothers when aging babies up to adults
 
 ## Misc Improvements
 - `gui/sitemap`: show whether a unit is friendly, hostile, or wild
