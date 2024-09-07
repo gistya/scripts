@@ -162,6 +162,7 @@ function NoteManager:init()
         widgets.Window{
             frame={w=35,h=20},
             frame_inset={t=1},
+            frame_title='Notes',
             resizable=true,
             subviews={
                 widgets.HotkeyLabel {
@@ -176,7 +177,7 @@ function NoteManager:init()
                     frame={t=1,h=3},
                     frame_style=gui.FRAME_INTERIOR,
                     init_text=self.note and self.note.point.name or '',
-                    init_cursor=1,
+                    init_cursor=self.note and #self.note.point.name+1 or 1,
                     one_line_mode=true
                 },
                 widgets.HotkeyLabel {
