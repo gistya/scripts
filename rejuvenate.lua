@@ -2,15 +2,40 @@
 
 local utils = require('utils')
 
+local DEFAULT_CHILD_AGE = 18
+local DEFAULT_OLD_AGE = 160
 local ANY_BABY = df.global.world.units.other.ANY_BABY
+
+local function get_caste_misc(unit)
+    local cre = df.creature_raw.find(unit.race)
+    if not cre then return end
+    if unit.caste < 0 or unit.caste >= #cre.caste then
+        return
+    end
+    return cre.caste[unit.caste].misc
+end
+
+local function get_adult_age(misc)
+    return misc and misc.child_age or DEFAULT_CHILD_AGE
+end
+
+local function get_rand_old_age(misc)
+    return misc and math.random(misc.maxage_min, misc.maxage_max) or DEFAULT_OLD_AGE
+end
 
 -- called by armoks-blessing
 function rejuvenate(unit, quiet, force, dry_run, age)
-    age = age or 20
+    local name = dfhack.df2console(dfhack.units.getReadableName(unit))
+    local misc = get_caste_misc(unit)
+    local adult_age = get_adult_age(misc)
+    age = age or adult_age
+    if age < adult_age then
+        dfhack.printerr('cannot set age to child or baby range')
+        return
+    end
     local current_year = df.global.cur_year
     local new_birth_year = current_year - age
-    local new_old_year = unit.old_year < 0 and -1 or math.max(unit.old_year, new_birth_year + 160)
-    local name = dfhack.df2console(dfhack.units.getReadableName(unit))
+    local new_old_year = unit.old_year < 0 and -1 or math.max(unit.old_year, new_birth_year + get_rand_old_age(misc))
     if unit.birth_year > new_birth_year and not force then
         if not quiet then
             dfhack.printerr(name .. ' is under ' .. age .. ' years old. Use --force to force.')
@@ -50,7 +75,7 @@ function rejuvenate(unit, quiet, force, dry_run, age)
         if hf then hf.profession = df.profession.STANDARD end
     end
     if not quiet then
-        print(name .. ' is now ' .. age .. ' years old and will live to at least 160')
+        print(name .. ' is now ' .. age .. ' years old and will live a normal lifespan henceforth')
     end
 end
 
