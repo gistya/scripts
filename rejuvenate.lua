@@ -7,12 +7,9 @@ local DEFAULT_OLD_AGE = 160
 local ANY_BABY = df.global.world.units.other.ANY_BABY
 
 local function get_caste_misc(unit)
-    local cre = df.creature_raw.find(unit.race)
-    if not cre then return end
-    if unit.caste < 0 or unit.caste >= #cre.caste then
-        return
-    end
-    return cre.caste[unit.caste].misc
+    local craw = dfhack.units.getCasteRaw(unit)
+    if not craw then return end
+    return craw.misc
 end
 
 local function get_adult_age(misc)
