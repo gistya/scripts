@@ -4,6 +4,7 @@
 local overlay = require('plugins.overlay')
 local widgets = require('gui.widgets')
 local repeatutil = require("repeat-util")
+local orders = require('plugins.orders')
 
 ---create a new linked job
 ---@return df.job
@@ -361,6 +362,7 @@ IdleCraftingOverlay.ATTRS {
         'dwarfmode/ViewSheets/BUILDING/Workshop/Craftsdwarfs/Workers',
     },
     frame = { w = 54, h = 1 },
+    visible = orders.can_set_labors
 }
 
 function IdleCraftingOverlay:init()
