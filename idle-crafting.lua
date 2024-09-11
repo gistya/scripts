@@ -6,12 +6,116 @@ local widgets = require('gui.widgets')
 local repeatutil = require("repeat-util")
 local orders = require('plugins.orders')
 
+---iterate over input materials of workshop with stockpile links
+---@param workshop df.building_workshopst
+---@param action fun(item:df.item):any
+local function for_inputs(workshop, action)
+    if #workshop.profile.links.take_from_pile == 0 then
+        dfhack.error('workshop has no links')
+    else
+        for _, stockpile in ipairs(workshop.profile.links.take_from_pile) do
+            for _, item in ipairs(dfhack.buildings.getStockpileContents(stockpile)) do
+                if(item:isAssignedToThisStockpile(stockpile.id)) then
+                    for _, contained_item in ipairs(dfhack.items.getContainedItems(item)) do
+                       action(contained_item)
+                    end
+                else
+                    action(item)
+                end
+            end
+        end
+        for _, contained_item in ipairs(workshop.contained_items) do
+            if contained_item.use_mode == 0 then
+                action(contained_item.item)
+            end
+        end
+    end
+end
+
+---choose random value based on positive integer weights
+---@generic T
+---@param choices table<T,integer>
+---@return T
+function weightedChoice(choices)
+    local sum = 0
+    for _, weight in pairs(choices) do
+        sum = sum + weight
+    end
+    if sum <= 0 then
+        return nil
+    end
+    local random = math.random(sum)
+    for choice, weight in pairs(choices) do
+        if random > weight then
+            random = random - weight
+        else
+            return choice
+        end
+    end
+    return nil --never reached on well-formed input
+end
+
 ---create a new linked job
 ---@return df.job
 function make_job()
     local job = df.job:new()
     dfhack.job.linkIntoWorld(job, true)
     return job
+end
+
+function assignToWorkshop(job, workshop)
+    job.pos = xyz2pos(workshop.centerx, workshop.centery, workshop.z)
+    dfhack.job.addGeneralRef(job, df.general_ref_type.BUILDING_HOLDER, workshop.id)
+    workshop.jobs:insert("#", job)
+end
+
+---make totem at specified workshop
+---@param unit df.unit
+---@param workshop df.building_workshopst
+---@return boolean
+function makeTotem(unit, workshop)
+    local job = make_job()
+    job.job_type = df.job_type.MakeTotem
+    job.mat_type = -1
+
+    local jitem = df.job_item:new()
+    jitem.item_type = df.item_type.NONE --the game seems to leave this uninitialized
+    jitem.mat_type = -1
+    jitem.mat_index = -1
+    jitem.quantity = 1
+    jitem.vector_id = df.job_item_vector_id.ANY_REFUSE
+    jitem.flags1.unrotten = true
+    jitem.flags2.totemable = true
+    jitem.flags2.body_part = true
+    job.job_items.elements:insert('#', jitem)
+
+    assignToWorkshop(job, workshop)
+    return dfhack.job.addWorker(job, unit)
+end
+
+---make totem at specified workshop
+---@param unit df.unit
+---@param workshop df.building_workshopst
+---@return boolean
+function makeHornCrafts(unit, workshop)
+    local job = make_job()
+    job.job_type = df.job_type.MakeCrafts
+    job.mat_type = -1
+    job.material_category.horn = true
+
+    local jitem = df.job_item:new()
+    jitem.item_type = df.item_type.NONE --the game seems to leave this uninitialized
+    jitem.mat_type = -1
+    jitem.mat_index = -1
+    jitem.quantity = 1
+    jitem.vector_id = df.job_item_vector_id.ANY_REFUSE
+    jitem.flags1.unrotten = true
+    jitem.flags2.horn = true
+    jitem.flags2.body_part = true
+    job.job_items.elements:insert('#', jitem)
+
+    assignToWorkshop(job, workshop)
+    return dfhack.job.addWorker(job, unit)
 end
 
 ---make bone crafts at specified workshop
@@ -23,7 +127,6 @@ function makeBoneCraft(unit, workshop)
     job.job_type = df.job_type.MakeCrafts
     job.mat_type = -1
     job.material_category.bone = true
-    job.pos = xyz2pos(workshop.centerx, workshop.centery, workshop.z)
 
     local jitem = df.job_item:new()
     jitem.item_type = df.item_type.NONE
@@ -36,8 +139,7 @@ function makeBoneCraft(unit, workshop)
     jitem.flags2.body_part = true
     job.job_items.elements:insert('#', jitem)
 
-    dfhack.job.addGeneralRef(job, df.general_ref_type.BUILDING_HOLDER, workshop.id)
-    workshop.jobs:insert("#", job)
+    assignToWorkshop(job, workshop)
     return dfhack.job.addWorker(job, unit)
 end
 
@@ -49,7 +151,6 @@ function makeRockCraft(unit, workshop)
     local job = make_job()
     job.job_type = df.job_type.MakeCrafts
     job.mat_type = 0
-    job.pos = xyz2pos(workshop.centerx, workshop.centery, workshop.z)
 
     local jitem = df.job_item:new()
     jitem.item_type = df.item_type.BOULDER
@@ -61,10 +162,25 @@ function makeRockCraft(unit, workshop)
     jitem.flags3.hard = true
     job.job_items.elements:insert('#', jitem)
 
-    dfhack.job.addGeneralRef(job, df.general_ref_type.BUILDING_HOLDER, workshop.id)
-    workshop.jobs:insert("#", job)
-
+    assignToWorkshop(job, workshop)
     return dfhack.job.addWorker(job, unit)
+end
+
+---categorize and count crafting materials (for Craftsdwarf's workshop)
+---@param tab table<string,integer>
+---@param item df.item
+local function categorize_craft(tab,item)
+    if df.item_corpsepiecest:is_instance(item) then
+        if item.corpse_flags.bone then
+            tab['bone'] = (tab['bone'] or 0) + item.material_amount.Bone
+        elseif item.corpse_flags.skull then
+            tab['skull'] = (tab['skull'] or 0) + 1
+        elseif item.corpse_flags.horn then
+            tab['horn'] = (tab['horn'] or 0) + item.material_amount.Horn
+        end
+    elseif df.item_boulderst:is_instance(item) then
+        tab['boulder'] = (tab['boulder'] or 0) + 1
+    end
 end
 
 -- script logic
@@ -180,6 +296,32 @@ function unitIsAvailable(unit)
     return true
 end
 
+---select crafting job based on available resources
+---@param workshop df.building_workshopst
+---@return (fun(unit:df.unit, workshop:df.building_workshopst):boolean)?
+function select_crafting_job(workshop)
+    local tab = {}
+    for_inputs(workshop, curry(categorize_craft,tab))
+    local blocked_labors = workshop.profile.blocked_labors
+    if blocked_labors[STONE_CRAFT] then
+        tab['boulder'] = nil
+    end
+    if blocked_labors[BONE_CARVE] then
+        tab['bone'] = nil
+        tab['skull'] = nil
+        tab['horn'] = nil
+    end
+    local material = weightedChoice(tab)
+    if material == 'bone' then return makeBoneCraft
+    elseif material == 'skull' then return makeTotem
+    elseif material == 'horn' then return makeHornCrafts
+    elseif material == 'boulder' then return makeRockCraft
+    else
+        return nil
+    end
+end
+
+
 ---check if unit is ready and try to create a crafting job for it
 ---@param workshop df.building_workshopst
 ---@param idx integer "index of the unit's group"
@@ -200,19 +342,31 @@ local function processUnit(workshop, idx, unit_id)
     end
     -- We have an available unit
     local success = false
-    if workshop.profile.blocked_labors[STONE_CRAFT] == false then
-        success = makeRockCraft(unit, workshop)
-    end
-    if not success and workshop.profile.blocked_labors[BONE_CARVE] == false then
-        success = makeBoneCraft(unit, workshop)
+    if #workshop.profile.links.take_from_pile == 0 then
+        -- can we do something smarter here?
+        if workshop.profile.blocked_labors[STONE_CRAFT] == false then
+            success = makeRockCraft(unit, workshop)
+        end
+        if not success and workshop.profile.blocked_labors[BONE_CARVE] == false then
+            success = makeBoneCraft(unit, workshop)
+        end
+        if not success then
+            dfhack.printerr('idle-crafting: profile allows neither bone carving nor stonecrafting')
+        end
+    else
+        local craftItem = select_crafting_job(workshop)
+        if craftItem then
+            success = craftItem(unit, workshop)
+        else
+            print('idle-crafting: workshop has no usable materials in linked stockpiles')
+            failing[workshop.id] = true
+        end
     end
     if success then
         -- Why is the encoding still wrong, even when using df2console?
         print('idle-crafting: assigned crafting job to ' .. dfhack.df2console(dfhack.units.getReadableName(unit)))
         watched[idx][unit_id] = nil
         allowed[workshop.id] = df.global.world.frame_counter
-    else
-        dfhack.printerr('idle-crafting: profile allows neither bone carving nor stonecrafting, disabling workshop')
     end
     return true
 end
