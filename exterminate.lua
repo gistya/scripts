@@ -199,7 +199,7 @@ if not positionals[1] or positionals[1] == 'list' then
     end)
     for _,v in ipairs(sorted_races) do
         local name_str = v.name
-        if name_str ~= 'UNDEAD' then
+        if name_str ~= 'UNDEAD' and v.display_name ~= string.lower(name_str):gsub('_', ' ') then
             name_str = ('%-'..tostring(max_width)..'s  (%s)'):format(name_str, v.display_name)
         end
         print(('%4s %s'):format(v.count, name_str))
