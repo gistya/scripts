@@ -356,18 +356,20 @@ end
 IdleCraftingOverlay = defclass(IdleCraftingOverlay, overlay.OverlayWidget)
 IdleCraftingOverlay.ATTRS {
     desc = "Adds a toggle for recreational crafting to Craftdwarf's workshops.",
-    default_pos = { x = -42, y = 41 },
+    default_pos = { x = -39, y = 41 },
+    version = 2,
     default_enabled = true,
     viewscreens = {
         'dwarfmode/ViewSheets/BUILDING/Workshop/Craftsdwarfs/Workers',
     },
-    frame = { w = 54, h = 1 },
+    frame = { w = 58, h = 1 },
     visible = orders.can_set_labors
 }
 
 function IdleCraftingOverlay:init()
     self:addviews {
         widgets.BannerPanel{
+            frame={l=0, w=54},
             subviews={
                 widgets.CycleHotkeyLabel {
                     view_id = 'leisure_toggle',
@@ -387,6 +389,10 @@ function IdleCraftingOverlay:init()
                     end,
                 }
             },
+        },
+        widgets.HelpButton{
+            frame={r=0},
+            command='idle-crafting',
         },
     }
 end
