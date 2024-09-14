@@ -23,3 +23,8 @@ Usage
 ::
 
     fix/ownership
+
+Links
+-----
+
+Among other issues, this tool fixes :bug:`6578`.
