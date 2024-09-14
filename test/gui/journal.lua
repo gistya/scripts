@@ -1110,7 +1110,7 @@ function test.jump_to_text_end()
     text_area:setCursor(1)
     journal:onRender()
 
-    simulate_input_keys('KEYBOARD_CURSOR_DOWN_FAST')
+    simulate_input_keys('CUSTOM_CTRL_END')
 
     expect.eq(read_rendered_text(text_area), table.concat({
         '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
@@ -1119,7 +1119,7 @@ function test.jump_to_text_end()
         '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit._',
     }, '\n'));
 
-    simulate_input_keys('KEYBOARD_CURSOR_DOWN_FAST')
+    simulate_input_keys('CUSTOM_CTRL_END')
 
     expect.eq(read_rendered_text(text_area), table.concat({
         '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
@@ -1142,7 +1142,7 @@ function test.jump_to_text_begin()
 
     simulate_input_text(text)
 
-    simulate_input_keys('KEYBOARD_CURSOR_UP_FAST')
+    simulate_input_keys('CUSTOM_CTRL_HOME')
 
     expect.eq(read_rendered_text(text_area), table.concat({
         '_0: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
@@ -1151,7 +1151,7 @@ function test.jump_to_text_begin()
         '60: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
     }, '\n'));
 
-    simulate_input_keys('KEYBOARD_CURSOR_UP_FAST')
+    simulate_input_keys('CUSTOM_CTRL_HOME')
 
     expect.eq(read_rendered_text(text_area), table.concat({
         '_0: Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
@@ -1388,10 +1388,10 @@ function test.jump_begin_or_end_reset_selection()
         'porttitor mi, vitae rutrum eros metus nec libero.',
     }, '\n'));
 
-    simulate_input_keys('KEYBOARD_CURSOR_UP_FAST')
+    simulate_input_keys('CUSTOM_CTRL_HOME')
     expect.eq(read_selected_text(text_area), '')
 
-    simulate_input_keys('KEYBOARD_CURSOR_DOWN_FAST')
+    simulate_input_keys('CUSTOM_CTRL_END')
     expect.eq(read_selected_text(text_area), '')
 
     journal:dismiss()
@@ -2426,7 +2426,7 @@ function test.scroll_follows_cursor()
         'Ut gravida tortor ac accumsan suscipit.',
     }, '\n'))
 
-    simulate_input_keys('KEYBOARD_CURSOR_UP_FAST')
+    simulate_input_keys('CUSTOM_CTRL_HOME')
 
     simulate_mouse_click(text_area, 0, 9)
     simulate_input_keys('KEYBOARD_CURSOR_DOWN')

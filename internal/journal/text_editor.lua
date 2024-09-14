@@ -761,10 +761,10 @@ function TextEditorView:onCursorInput(keys)
         self:setCursor(offset)
         self.last_cursor_x = last_cursor_x
         return true
-    elseif keys.KEYBOARD_CURSOR_UP_FAST then
+    elseif keys.CUSTOM_CTRL_HOME then
         self:setCursor(1)
         return true
-    elseif keys.KEYBOARD_CURSOR_DOWN_FAST then
+    elseif keys.CUSTOM_CTRL_END then
         -- go to text end
         self:setCursor(#self.text + 1)
         return true
