@@ -58,6 +58,7 @@ Template for new versions:
 - `assign-minecarts`: reassign vehicles to routes where the vehicle has been destroyed (or has otherwise gone missing)
 - `fix/dry-buckets`: prompt DF to recheck requests for aid (e.g. "bring water" jobs) when a bucket is unclogged and becomes available for use
 - `exterminate`: show descriptive names for the listed races in addition to their IDs
+- `exterminate`: show actual names for unique creatures such as forgotten beasts and titans
 - `fix/ownership`: now also checks and fixes room ownership links
 
 ## Documentation
