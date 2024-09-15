@@ -27,6 +27,18 @@ Template for new versions:
 # Future
 
 ## New Tools
+
+## New Features
+
+## Fixes
+
+## Misc Improvements
+
+## Removed
+
+# 50.13-r5
+
+## New Tools
 - `embark-anyone`: allows you to embark as any civilization, including dead and non-dwarven civs
 - `idle-crafting`: allow dwarves to independently satisfy their need to craft objects
 - `gui/family-affairs`: (reinstated) inspect or meddle with pregnancies, marriages, or lover relationships
@@ -63,8 +75,6 @@ Template for new versions:
 
 ## Documentation
 - `gui/embark-anywhere`: add information about how the game determines world tile pathability and instructions for bridging two landmasses
-
-## Removed
 
 # 50.13-r4
 
