@@ -46,7 +46,7 @@ this way.
 
 When a workshop is designated for idle crafting, this tool will create crafting
 jobs and assign them to idle dwarves who have a need for crafting objects. This
-script respects the setting for permitted general work orders from the "Workers"
+script respects the setting for permitted general work order labors from the "Workers"
 tab.
 
 For workshops without input stockpile links, bone carving and stonecrafting are

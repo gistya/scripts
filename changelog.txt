@@ -57,7 +57,6 @@ Template for new versions:
 - `position`: option to copy keyboard cursor position to the clipboard
 - `assign-minecarts`: reassign vehicles to routes where the vehicle has been destroyed (or has otherwise gone missing)
 - `fix/dry-buckets`: prompt DF to recheck requests for aid (e.g. "bring water" jobs) when a bucket is unclogged and becomes available for use
-- `idle-crafting`: make choice of crafting job dependent on resources in linked stockpiles.
 - `exterminate`: show descriptive names for the listed races in addition to their IDs
 
 ## Documentation

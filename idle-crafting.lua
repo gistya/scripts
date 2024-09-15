@@ -15,7 +15,7 @@ local function for_inputs(workshop, action)
     else
         for _, stockpile in ipairs(workshop.profile.links.take_from_pile) do
             for _, item in ipairs(dfhack.buildings.getStockpileContents(stockpile)) do
-                if(item:isAssignedToThisStockpile(stockpile.id)) then
+                if item:isAssignedToThisStockpile(stockpile.id) then
                     for _, contained_item in ipairs(dfhack.items.getContainedItems(item)) do
                        action(contained_item)
                     end
@@ -25,7 +25,7 @@ local function for_inputs(workshop, action)
             end
         end
         for _, contained_item in ipairs(workshop.contained_items) do
-            if contained_item.use_mode == 0 then
+            if contained_item.use_mode == df.building_item_role_type.TEMP then
                 action(contained_item.item)
             end
         end
