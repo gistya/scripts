@@ -1,5 +1,4 @@
 -- lists books that contain secrets of life and death.
--- Author: Ajhaa
 
 local argparse = require("argparse")
 
