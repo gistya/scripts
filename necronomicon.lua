@@ -14,7 +14,7 @@ function get_book_interactions(item)
 
                 for _, ref in ipairs (written_content.refs) do
                     if ref._type == df.general_ref_interactionst then
-                        local interaction = df.global.world.raws.interactions[ref.interaction_id]
+                        local interaction = df.interaction.find(ref.interaction_id)
                         table.insert(book_interactions, interaction)
                     end
                 end
@@ -34,7 +34,7 @@ end
 function get_item_artifact(item)
     for _, ref in ipairs(item.general_refs) do
         if ref._type == df.general_ref_is_artifactst then
-            return df.global.world.artifacts.all[ref.artifact_id]
+            return df.artifact_record.find(ref.artifact_id)
         end
     end
 end
