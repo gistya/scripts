@@ -1,3 +1,5 @@
+debug_print = false
+
 local function for_pray_need(needs, fn)
     for idx, need in ipairs(needs) do
         if need.id == df.need_type.PrayOrMeditate then
@@ -85,7 +87,7 @@ for _,unit in ipairs(dfhack.units.getCitizens(false, true)) do
         goto next_unit
     end
     local needs = unit.status.current_soul.personality.needs
-    if shuffle_prayer_needs(needs, prayer_targets) then
+    if shuffle_prayer_needs(needs, prayer_targets) and debug_print then
         print('rebalanced prayer needs for ' ..
             dfhack.df2console(dfhack.TranslateName(dfhack.units.getVisibleName(unit))))
     end
