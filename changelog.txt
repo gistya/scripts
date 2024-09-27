@@ -34,6 +34,8 @@ Template for new versions:
 
 ## Misc Improvements
 
+- `idle-crafting`: also support making shell crafts for workshops with linked input stockpiles
+
 ## Removed
 
 # 50.13-r5
