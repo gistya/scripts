@@ -126,7 +126,7 @@ COMMANDS_BY_IDX = {
         desc='Displays percentages on partially-consumed items like hospital cloth.'},
     {command='pop-control', group='gameplay', mode='enable'},
     {command='realistic-melting', help_command='tweak', group='gameplay', mode='tweak', default=false,
-        desc='Adjust selected item types melt return for all metals to ~95% of forging cost. Reduce melt return by 10% per wear level. Affects weapons, shields, armor parts, tools, and trap components.'},
+        desc='Adjust selected item types melt return for all metals to ~95% of forging cost. Reduce melt return by 10% per wear level.'},
     {command='starvingdead', group='gameplay', mode='enable'},
     {command='timestream', group='gameplay', mode='enable'},
     {command='work-now', group='gameplay', mode='enable'},
