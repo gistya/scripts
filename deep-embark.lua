@@ -161,7 +161,7 @@ function moveEmbarkStuff(selectedBlock, embarkTiles)
     local unitsAtSpawn = dfhack.units.getUnitsInBox(x1, y1, z1, x2, y2, z2)
     local movedUnit = false
     for i, unit in ipairs(unitsAtSpawn) do
-        if unit.civ_id == df.global.plotinfo.civ_id and not unit.flags2.killed then
+        if unit.civ_id == df.global.plotinfo.civ_id and not unit.flags1.inactive and not unit.flags2.killed then
             local pos = embarkTiles[math.random(1, #embarkTiles)]
             dfhack.units.teleport(unit, pos)
             reveal(pos)
