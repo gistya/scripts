@@ -54,7 +54,7 @@ supported, with stonecrafting being the default option. Thus, to designate a
 workshop for bone carving, disable the stonecrafting labor while keeping the
 bone carving labor enabled.
 
-For workshops with input stockpile links, the creation of totems and horn crafts
-are supported as well. In this case, the choice of job is made randomly based on
-the resources available in the input stockpiles (respecting the permitted
-labors from the workshop profile).
+For workshops with input stockpile links, the creation of totems, shell crafts,
+and horn crafts are supported as well. In this case, the choice of job is made
+randomly based on the resources available in the input stockpiles (respecting
+the permitted labors from the workshop profile).
