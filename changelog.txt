@@ -33,6 +33,9 @@ Template for new versions:
 ## Fixes
 
 ## Misc Improvements
+- `control-panel`: Add realistic-melting tweak to control-panel registry
+
+- `idle-crafting`: also support making shell crafts for workshops with linked input stockpiles
 
 ## Removed
 
