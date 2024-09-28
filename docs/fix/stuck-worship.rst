@@ -26,6 +26,7 @@ another task.
 Usage
 -----
 
-::
-
-    fix/stuck-worship
+``fix/stuck-worship``
+    Rebalance prayer needs of units in the fort.
+``fix/stuck-worship -v``, ``fix/stuck-worship --verbose``
+    Rebalance prayer needs of units in the fort. Print names of affected units.

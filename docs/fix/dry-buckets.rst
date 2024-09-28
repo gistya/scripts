@@ -19,6 +19,7 @@ manually.
 Usage
 -----
 
-::
-
-    fix/dry-buckets
+``fix/dry-buckets``
+    Empty water buckets not currently used in jobs.
+``fix/dry-buckets -q``, ``fix/dry-buckets --quiet``
+    Empty water buckets not currently used in jobs. Don't print to the console.
