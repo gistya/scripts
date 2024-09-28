@@ -761,30 +761,30 @@ function TextEditorView:onCursorInput(keys)
         self:setCursor(offset)
         self.last_cursor_x = last_cursor_x
         return true
-    elseif keys.KEYBOARD_CURSOR_UP_FAST then
+    elseif keys.CUSTOM_CTRL_HOME then
         self:setCursor(1)
         return true
-    elseif keys.KEYBOARD_CURSOR_DOWN_FAST then
+    elseif keys.CUSTOM_CTRL_END then
         -- go to text end
         self:setCursor(#self.text + 1)
         return true
-    elseif keys.CUSTOM_CTRL_B or keys.A_MOVE_W_DOWN then
+    elseif keys.CUSTOM_CTRL_LEFT then
         -- back one word
         local word_start = self:wordStartOffset()
         self:setCursor(word_start)
         return true
-    elseif keys.CUSTOM_CTRL_F or keys.A_MOVE_E_DOWN then
+    elseif keys.CUSTOM_CTRL_RIGHT then
         -- forward one word
         local word_end = self:wordEndOffset()
         self:setCursor(word_end)
         return true
-    elseif keys.CUSTOM_CTRL_H then
+    elseif keys.CUSTOM_HOME then
         -- line start
         self:setCursor(
             self:lineStartOffset()
         )
         return true
-    elseif keys.CUSTOM_CTRL_E then
+    elseif keys.CUSTOM_END then
         -- line end
         self:setCursor(
             self:lineEndOffset()
@@ -878,8 +878,7 @@ function TextEditorView:onTextManipulationInput(keys)
         self:eraseSelection()
 
         return true
-    elseif keys.CUSTOM_CTRL_D then
-        -- delete char, there is no support for `Delete` key
+    elseif keys.CUSTOM_DELETE then
         self.history:store(HISTORY_ENTRY.DELETE, self.text, self.cursor)
 
         if (self:hasSelection()) then

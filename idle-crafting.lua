@@ -143,6 +143,31 @@ function makeBoneCraft(unit, workshop)
     return dfhack.job.addWorker(job, unit)
 end
 
+---make shell crafts at specified workshop
+---@param unit df.unit
+---@param workshop df.building_workshopst
+---@return boolean
+function makeShellCraft(unit, workshop)
+    local job = make_job()
+    job.job_type = df.job_type.MakeCrafts
+    job.mat_type = -1
+    job.material_category.shell = true
+
+    local jitem = df.job_item:new()
+    jitem.item_type = df.item_type.NONE
+    jitem.mat_type = -1
+    jitem.mat_index = -1
+    jitem.quantity = 1
+    jitem.vector_id = df.job_item_vector_id.ANY_REFUSE
+    jitem.flags1.unrotten = true
+    jitem.flags2.shell = true
+    jitem.flags2.body_part = true
+    job.job_items.elements:insert('#', jitem)
+
+    assignToWorkshop(job, workshop)
+    return dfhack.job.addWorker(job, unit)
+end
+
 ---make rock crafts at specified workshop
 ---@param unit df.unit
 ---@param workshop df.building_workshopst
@@ -177,6 +202,8 @@ local function categorize_craft(tab,item)
             tab['skull'] = (tab['skull'] or 0) + 1
         elseif item.corpse_flags.horn then
             tab['horn'] = (tab['horn'] or 0) + item.material_amount.Horn
+        elseif item.corpse_flags.shell then
+            tab['shell'] = (tab['shell'] or 0) + 1
         end
     elseif df.item_boulderst:is_instance(item) then
         tab['boulder'] = (tab['boulder'] or 0) + 1
@@ -310,11 +337,13 @@ function select_crafting_job(workshop)
         tab['bone'] = nil
         tab['skull'] = nil
         tab['horn'] = nil
+        tab['shell'] = nil
     end
     local material = weightedChoice(tab)
     if material == 'bone' then return makeBoneCraft
     elseif material == 'skull' then return makeTotem
     elseif material == 'horn' then return makeHornCrafts
+    elseif material == 'shell' then return makeShellCraft
     elseif material == 'boulder' then return makeRockCraft
     else
         return nil

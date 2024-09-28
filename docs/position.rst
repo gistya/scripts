@@ -3,7 +3,7 @@ position
 
 .. dfhack-tool::
     :summary: Report cursor and mouse position, along with other info.
-    :tags: adventure fort inspection map
+    :tags: adventure dfhack fort inspection map
 
 This tool reports the current date, clock time, month, season, and historical
 era. It also reports the keyboard cursor position (or just the z-level if no

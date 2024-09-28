@@ -31,8 +31,11 @@ Template for new versions:
 ## New Features
 
 ## Fixes
+- `gui/quickfort`: only print a help blueprint's text once even if the repeat setting is enabled
 
 ## Misc Improvements
+- `control-panel`: Add realistic-melting tweak to control-panel registry
+- `idle-crafting`: also support making shell crafts for workshops with linked input stockpiles
 - `fix/stuck-worship`: reduced console output by default. ``--verbose`` option to print all affected units.
 
 ## Removed
