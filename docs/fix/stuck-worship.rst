@@ -48,4 +48,3 @@ Options
 ``-q``, ``--quiet``
     Don't print the number of affected units if it's zero. Intended for
     automatic use.
-
