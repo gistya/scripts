@@ -26,7 +26,26 @@ another task.
 Usage
 -----
 
+::
+
+    fix/stuck-worship [<options>]
+
+Reshuffle prayer needs of units in the fort.
+
+Examples
+--------
+
 ``fix/stuck-worship``
-    Rebalance prayer needs of units in the fort.
-``fix/stuck-worship -v``, ``fix/stuck-worship --verbose``
-    Rebalance prayer needs of units in the fort. Print names of affected units.
+    Rebalance prayer needs and print the total number of affected units.
+``fix/stuck-worship -v``
+    Same as above, but also print the names of all affected units.
+
+Options
+-------
+
+``-v``, ``--verbose``
+    Print the names of all affected units.
+``-q``, ``--quiet``
+    Don't print the number of affected units if it's zero. Intended for
+    automatic use.
+

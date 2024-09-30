@@ -1,8 +1,9 @@
 local argparse = require('argparse')
 
-local verbose = false
+local verbose, quiet = false, false
 argparse.processArgsGetopt({...}, {
     {'v', 'verbose', handler=function() verbose = true end},
+    {'q', 'quiet', handler=function() quiet = true end},
 })
 
 local function for_pray_need(needs, fn)
@@ -106,6 +107,6 @@ for _,unit in ipairs(dfhack.units.getCitizens(false, true)) do
     ::next_unit::
 end
 
-if verbose or count > 0 then
+if not quiet or count > 0 then
     print(('Rebalanced prayer needs for %d units.'):format(count))
 end
