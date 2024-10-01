@@ -200,8 +200,8 @@ PREFERENCES_BY_IDX = {
         desc='How long to wait for the second click of a double click, in ms.',
         default=500,
         min=50,
-        get_fn=function() return widgets.DOUBLE_CLICK_MS end,
-        set_fn=function(val) widgets.DOUBLE_CLICK_MS = val end,
+        get_fn=widgets.getDoubleClickMs,
+        set_fn=widgets.setDoubleClickMs,
     },
     {
         name='SCROLL_DELAY_MS',
@@ -209,8 +209,8 @@ PREFERENCES_BY_IDX = {
         desc='The delay between events when holding the mouse button down on a scrollbar, in ms.',
         default=20,
         min=5,
-        get_fn=function() return widgets.SCROLL_DELAY_MS end,
-        set_fn=function(val) widgets.SCROLL_DELAY_MS = val end,
+        get_fn=widgets.getScrollDelayMs,
+        set_fn=widgets.setScrollDelayMs,
     },
     {
         name='SCROLL_INITIAL_DELAY_MS',
@@ -218,8 +218,8 @@ PREFERENCES_BY_IDX = {
         desc='The delay before scrolling quickly when holding the mouse button down on a scrollbar, in ms.',
         default=300,
         min=5,
-        get_fn=function() return widgets.SCROLL_INITIAL_DELAY_MS end,
-        set_fn=function(val) widgets.SCROLL_INITIAL_DELAY_MS = val end,
+        get_fn=widgets.getScrollInitialDelayMs,
+        set_fn=widgets.setScrollInitialDelayMs,
     },
 }
 

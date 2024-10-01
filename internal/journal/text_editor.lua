@@ -551,7 +551,7 @@ function TextEditorView:getMultiLeftClick(x, y)
         if (
             self.last_click.x ~= x or
             self.last_click.y ~= y or
-            from_last_click_ms > widgets.DOUBLE_CLICK_MS
+            from_last_click_ms > widgets.getDoubleClickMs()
         ) then
             self.clicks_count = 0;
         end

@@ -253,7 +253,7 @@ function Autodump:onInput(keys)
         end
         local now_ms = dfhack.getTickCount()
         if same_xyz(pos, self.last_map_click_pos) and
-                now_ms - self.last_map_click_ms <= widgets.DOUBLE_CLICK_MS then
+                now_ms - self.last_map_click_ms <= widgets.getDoubleClickMs() then
             self:reset_double_click()
             self:do_dump(pos)
             self.mark = nil
