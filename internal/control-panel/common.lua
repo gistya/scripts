@@ -180,6 +180,9 @@ function set_preference(data, in_value)
     if expected_type == 'boolean' and type(value) ~= 'boolean' then
         value = argparse.boolean(value)
     end
+    if expected_type == "number" then
+        value = tonumber(value) or value
+    end
     local actual_type = type(value)
     if actual_type ~= expected_type then
         qerror(('"%s" has an unexpected value type: got: %s; expected: %s'):format(
