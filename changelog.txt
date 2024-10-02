@@ -32,6 +32,7 @@ Template for new versions:
 
 ## Fixes
 - `gui/quickfort`: only print a help blueprint's text once even if the repeat setting is enabled
+- `control-panel`: fix setting numeric preferences from the commandline
 
 ## Misc Improvements
 - `control-panel`: Add realistic-melting tweak to control-panel registry
