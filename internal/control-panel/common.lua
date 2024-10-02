@@ -181,7 +181,7 @@ function set_preference(data, in_value)
         value = argparse.boolean(value)
     end
     if expected_type == "number" then
-        value = tonumber(value)
+        value = tonumber(value) or value
     end
     local actual_type = type(value)
     if actual_type ~= expected_type then
