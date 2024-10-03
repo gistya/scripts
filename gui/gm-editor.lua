@@ -185,7 +185,7 @@ function GmEditorUi:init(args)
     local mainPage=widgets.Panel{
         subviews={
             mainList,
-            widgets.Label{text={{text="<no item>",id="name"},{gap=1,text="Help",key=keybindings.help.key,key_sep = '()'}}, view_id = 'lbl_current_item',frame = {l=1,t=1,yalign=0}},
+            widgets.Label{text={{text="<no item>",id="name"},{text="",pen=COLOR_RED,id="union"},{gap=1,text="Help",key=keybindings.help.key,key_sep = '()'}}, view_id = 'lbl_current_item',frame = {l=1,t=1,yalign=0}},
             widgets.EditField{frame={l=1,t=2,h=1},label_text="Search",key=keybindings.start_filter.key,key_sep='(): ',on_change=self:callback('text_input'),view_id="filter_input"}}
         ,view_id='page_main'}
 
@@ -625,13 +625,12 @@ end
 
 function GmEditorUi:getStringValue(trg, field)
     local obj = trg.target
-    local is_union = obj._type._union
 
     local text=tostring(obj[field])
     pcall(function()
         if obj._field == nil then return end
         local f = obj:_field(field)
-        if self.helpers and not is_union then
+        if self.helpers and not obj._type._union then
             if df.coord:is_instance(f) then
                 text=('(%d, %d, %d) %s'):format(f.x, f.y, f.z, text)
             elseif df.coord2d:is_instance(f) then
@@ -689,6 +688,7 @@ function GmEditorUi:updateTarget(preserve_pos,reindex)
             end
         end
     end
+    self.subviews.lbl_current_item:itemById('union').text = trg.target._type._union and " [union structure]" or ""
     self.subviews.lbl_current_item:itemById('name').text=tostring(trg.target)
     local t={}
     for k,v in pairs(trg.keys) do
