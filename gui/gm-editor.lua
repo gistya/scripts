@@ -1,12 +1,13 @@
 -- Interface powered memory object editor.
 --@module=true
 
-local gui = require 'gui'
-local json = require 'json'
-local dialog = require 'gui.dialogs'
-local widgets = require 'gui.widgets'
-local guiScript = require 'gui.script'
-local utils = require 'utils'
+local argparse = require('argparse')
+local gui = require('gui')
+local json = require('json')
+local dialog = require('gui.dialogs')
+local widgets = require('gui.widgets')
+local guiScript = require('gui.script')
+local utils = require('utils')
 
 config = config or json.open('dfhack-config/gm-editor.json')
 
@@ -124,7 +125,8 @@ GmEditorUi.ATTRS{
     frame_inset=0,
     resizable=true,
     resize_min=RESIZE_MIN,
-    read_only=(config.data.read_only or false)
+    read_only=(config.data.read_only or false),
+    helpers=true,
 }
 
 function burning_red(input) -- todo does not work! bug angavrilov that so that he would add this, very important!!
@@ -621,27 +623,31 @@ function GmEditorUi:onInput(keys)
     end
 end
 
-function getStringValue(trg,field)
+function GmEditorUi:getStringValue(trg, field)
     local obj=trg.target
 
     local text=tostring(obj[field])
     pcall(function()
-    if obj._field ~= nil then
-        local f = obj:_field(field)
-        if df.coord:is_instance(f) then
-            text=('(%d, %d, %d) '):format(f.x, f.y, f.z) .. text
-        elseif df.coord2d:is_instance(f) then
-            text=('(%d, %d) '):format(f.x, f.y) .. text
+        if obj._field ~= nil then
+            local f = obj:_field(field)
+            if self.helpers then
+                if df.coord:is_instance(f) then
+                    text=('(%d, %d, %d) %s'):format(f.x, f.y, f.z, text)
+                elseif df.coord2d:is_instance(f) then
+                    text=('(%d, %d) %s'):format(f.x, f.y, text)
+                elseif df.language_name:is_instance(f) then
+                    text=('%s (%s) %s'):format(dfhack.TranslateName(f, false), dfhack.TranslateName(f, true), text)
+                end
+            end
+            local enum=f._type
+            if enum._kind=="enum-type" then
+                text=text.." ("..tostring(enum[obj[field]])..")"
+            end
+            local ref_target=f.ref_target
+            if ref_target then
+                text=text.. " (ref-target: "..getmetatable(ref_target)..")"
+            end
         end
-        local enum=f._type
-        if enum._kind=="enum-type" then
-            text=text.." ("..tostring(enum[obj[field]])..")"
-        end
-        local ref_target=f.ref_target
-        if ref_target then
-            text=text.. " (ref-target: "..getmetatable(ref_target)..")"
-        end
-    end
     end)
     return text
 end
@@ -684,7 +690,7 @@ function GmEditorUi:updateTarget(preserve_pos,reindex)
     self.subviews.lbl_current_item:itemById('name').text=tostring(trg.target)
     local t={}
     for k,v in pairs(trg.keys) do
-        table.insert(t,{text={{text=string.format("%-"..trg.kw.."s",tostring(v))},{gap=2,text=getStringValue(trg,v)}}})
+        table.insert(t,{text={{text=string.format("%-"..trg.kw.."s",tostring(v))},{gap=2,text=self:getStringValue(trg,v)}}})
     end
     local last_selected, last_top
     if preserve_pos then
@@ -824,7 +830,7 @@ function GmScreen:init(args)
             end
         end
     end
-    self:addviews{GmEditorUi{target=target}}
+    self:addviews{GmEditorUi{target=target, helpers=args.helpers}}
     views[self] = true
 end
 
@@ -838,28 +844,26 @@ function GmScreen:onDismiss()
 end
 
 local function get_editor(args)
-    local freeze = false
-    if args[1] == '-f' or args[1] == '--freeze' then
-        freeze = true
-        table.remove(args, 1)
-    end
-    if #args~=0 then
-        if args[1]=="dialog" then
-            dialog.showInputPrompt("Gm Editor", "Object to edit:", COLOR_GRAY,
+    local freeze, helpers = false, true
+    local positionals = argparse.processArgsGetopt(args, {
+        {'f', 'freeze', 'safe-mode', handler=function() freeze = true end},
+        {nil, 'no-stringification', handler=function() helpers = false end},
+    })
+    if #positionals == 0 then
+        GmScreen{freeze=freeze, helpers=helpers, target=getTargetFromScreens()}:show()
+    else
+        if positionals[1]=="dialog" then
+            dialog.showInputPrompt("GM Editor", "Object to edit:", COLOR_GRAY,
                     "", function(entry)
-                        GmScreen{freeze=freeze, target=eval(entry)}:show()
+                        GmScreen{freeze=freeze, helpers=helpers, target=eval(entry)}:show()
                     end)
-        elseif args[1]=="free" then
-            GmScreen{freeze=freeze, target=df.reinterpret_cast(df[args[2]],args[3])}:show()
-        elseif args[1]=="scr" then
+        elseif positionals[1]=="scr" then
             -- this will not work for more complicated expressions, like scr.fieldname, but
             -- it should capture the most common case
-            GmScreen{freeze=freeze, target=dfhack.gui.getDFViewscreen(true)}:show()
+            GmScreen{freeze=freeze, helpers=helpers, target=dfhack.gui.getDFViewscreen(true)}:show()
         else
-            GmScreen{freeze=freeze, target=eval(args[1])}:show()
+            GmScreen{freeze=freeze, helpers=helpers, target=eval(positionals[1])}:show()
         end
-    else
-        GmScreen{freeze=freeze, target=getTargetFromScreens()}:show()
     end
 end
 
