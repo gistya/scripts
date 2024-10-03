@@ -185,7 +185,7 @@ function GmEditorUi:init(args)
     local mainPage=widgets.Panel{
         subviews={
             mainList,
-            widgets.Label{text={{text="<no item>",id="name"},{text="",pen=COLOR_RED,id="union"},{gap=1,text="Help",key=keybindings.help.key,key_sep = '()'}}, view_id = 'lbl_current_item',frame = {l=1,t=1,yalign=0}},
+            widgets.Label{text={{text="<no item>",id="name"},{text="",pen=COLOR_CYAN,id="union"},{gap=1,text="Help",key=keybindings.help.key,key_sep = '()'}}, view_id = 'lbl_current_item',frame = {l=1,t=1,yalign=0}},
             widgets.EditField{frame={l=1,t=2,h=1},label_text="Search",key=keybindings.start_filter.key,key_sep='(): ',on_change=self:callback('text_input'),view_id="filter_input"}}
         ,view_id='page_main'}
 
