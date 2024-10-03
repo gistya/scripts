@@ -75,7 +75,8 @@ Options
     Don't attempt to provide helpful string representations of potentially
     unsafe fields like language_name when browsing the data structures. Specify
     this option when you know you will be browsing garbage data that could lead
-    to crashes if accessed for stringification.
+    to crashes if accessed for stringification. Note that fields in union data
+    structures are never stringified.
 
 Screenshot
 ----------

@@ -624,29 +624,31 @@ function GmEditorUi:onInput(keys)
 end
 
 function GmEditorUi:getStringValue(trg, field)
-    local obj=trg.target
+    local obj = trg.target
+    local is_union = obj._type._union
 
     local text=tostring(obj[field])
     pcall(function()
-        if obj._field ~= nil then
-            local f = obj:_field(field)
-            if self.helpers then
-                if df.coord:is_instance(f) then
-                    text=('(%d, %d, %d) %s'):format(f.x, f.y, f.z, text)
-                elseif df.coord2d:is_instance(f) then
-                    text=('(%d, %d) %s'):format(f.x, f.y, text)
-                elseif df.language_name:is_instance(f) then
-                    text=('%s (%s) %s'):format(dfhack.TranslateName(f, false), dfhack.TranslateName(f, true), text)
-                end
+        if obj._field == nil then return end
+        local f = obj:_field(field)
+        if self.helpers and not is_union then
+            if df.coord:is_instance(f) then
+                text=('(%d, %d, %d) %s'):format(f.x, f.y, f.z, text)
+            elseif df.coord2d:is_instance(f) then
+                text=('(%d, %d) %s'):format(f.x, f.y, text)
+            elseif df.language_name:is_instance(f) then
+                text=('%s (%s) %s'):format(dfhack.TranslateName(f, false), dfhack.TranslateName(f, true), text)
             end
-            local enum=f._type
-            if enum._kind=="enum-type" then
-                text=text.." ("..tostring(enum[obj[field]])..")"
-            end
-            local ref_target=f.ref_target
-            if ref_target then
-                text=text.. " (ref-target: "..getmetatable(ref_target)..")"
-            end
+        end
+        local enum = f._type
+        if enum._kind=="enum-type" then
+            text=text.." ("..tostring(enum[obj[field]])..")"
+        end
+        -- this will throw for types that have no ref target; pcall will catch it, but make sure this bit stays
+        -- at the end of the pcall function body
+        local ref_target=f.ref_target
+        if ref_target then
+            text=text.. " (ref-target: "..getmetatable(ref_target)..")"
         end
     end)
     return text
