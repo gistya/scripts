@@ -29,6 +29,7 @@ Template for new versions:
 ## New Tools
 
 ## New Features
+- `force`: support the ``Wildlife`` event to allow additional wildlife to enter the map
 
 ## Fixes
 - `gui/quickfort`: only print a help blueprint's text once even if the repeat setting is enabled
