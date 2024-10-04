@@ -59,5 +59,5 @@ The supported event types are:
 - ``Megabeast``
 - ``Wildlife``
 
-Most events happen on the next tick. The ``Wildlife`` event may take up to 14
+Most events happen on the next tick. The ``Wildlife`` event may take up to 100
 ticks to take effect.
