@@ -102,6 +102,17 @@ local function is_active_wildlife(unit)
         unit.flags2.roaming_wilderness_population_source
 end
 
+-- called by force for the "Wildlife" event
+function free_all_wildlife(include_hidden)
+    for _,unit in ipairs(df.global.world.units.active) do
+        if is_active_wildlife(unit) and
+            (include_hidden or not dfhack.units.isHidden(unit))
+        then
+            detach_unit(unit)
+        end
+    end
+end
+
 local function unstick_surface_wildlife(opts)
     local unstuck = {}
     local week_ago_ticks = math.max(0, df.global.cur_year_tick - TICKS_PER_WEEK)
