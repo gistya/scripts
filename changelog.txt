@@ -27,6 +27,7 @@ Template for new versions:
 # Future
 
 ## New Tools
+- `fix/wildlife`: prevent wildlife from getting stuck when trying to exit the map. This fix needs to be enabled manually in `gui/control-panel` on the Bug Fixes tab since not all players want this bug to be fixed.
 
 ## New Features
 
