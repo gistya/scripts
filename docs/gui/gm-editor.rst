@@ -29,6 +29,16 @@ realtime, hit :kbd:`Alt`:kbd:`A` to switch to auto update mode.
     your game before poking around in `gui/gm-editor`, especially if you are
     examining data while the game is unpaused.
 
+.. warning::
+
+    Union data structures contain fields that occupy the same memory space.
+    When you see the ``[union structure]`` badge at the top of the screen, be
+    aware that only one of the fields in the structure is likely to make sense.
+    The "correct" field is usually indicated by some context in the parent
+    structure. If there are any pointers to substructures in the union,
+    inspecting the pointer when it is not the "correct" field may crash the
+    game.
+
 Usage
 -----
 
