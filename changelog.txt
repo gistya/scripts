@@ -34,6 +34,8 @@ Template for new versions:
 
 ## Fixes
 - `gui/quickfort`: only print a help blueprint's text once even if the repeat setting is enabled
+- `makeown`: quell any active enemy relationships with the converted creature
+- `fix/loyaltycascade`: allow the fix to work on non-dwarven citizens
 - `control-panel`: fix setting numeric preferences from the commandline
 
 ## Misc Improvements
