@@ -31,12 +31,15 @@ stuck for 7 days.
 Unlike most bugfixes, this one is not enabled by default since some players
 like to keep wildlife around for creative purposes (e.g. for intentionally
 stalling wildlife waves or for controlled startling of friendly necromancers).
+These players can selectively ignore the wildlife they want to keep captive
+before they enable `fix/wildlife`.
 
 Usage
 -----
 ::
 
     fix/wildlife [<options>]
+    fix/wildlife ignore [unit ID]
 
 Examples
 --------
@@ -48,6 +51,10 @@ Examples
     Remove wildlife that has been stuck for at least a week. The command must
     be run periodically with this option so it can discover newly stuck
     wildlife and remove wildlife when timeouts expire.
+``fix/wildlife ignore``
+    Disconnect the selected unit from its wildlife population so it doesn't
+    block new wildlife from entering the map, but keep the unit on the map.
+    This unit will not be touched by future invocations of this tool.
 
 Options
 -------

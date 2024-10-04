@@ -61,6 +61,13 @@ local function refund_population(entry)
     end
 end
 
+-- refund unit to population and ensure it doesn't get picked up by unstick_surface_wildlife in the future
+local function detach_unit(unit)
+    unit.flags2.roaming_wilderness_population_source = false
+    unit.flags2.roaming_wilderness_population_source_not_a_map_feature = false
+    refund_population{race=unit.race, pop=unit.animal.population, known=true, count=1}
+end
+
 local TICKS_PER_DAY = 1200
 local TICKS_PER_WEEK = TICKS_PER_DAY * 7
 local TICKS_PER_MONTH = 28 * TICKS_PER_DAY
@@ -88,16 +95,18 @@ local function to_key(pop)
         pop.region_x, pop.region_y, pop.feature_idx, pop.cave_id, pop.site_id, pop.population_idx)
 end
 
+local function is_active_wildlife(unit)
+    return not dfhack.units.isDead(unit) and
+        dfhack.units.isActive(unit) and
+        dfhack.units.isWildlife(unit) and
+        unit.flags2.roaming_wilderness_population_source
+end
+
 local function unstick_surface_wildlife(opts)
     local unstuck = {}
     local week_ago_ticks = math.max(0, df.global.cur_year_tick - TICKS_PER_WEEK)
     for _,unit in ipairs(df.global.world.units.active) do
-        if dfhack.units.isDead(unit) or
-            not dfhack.units.isActive(unit) or
-            not dfhack.units.isWildlife(unit) or
-            not unit.flags2.roaming_wilderness_population_source or
-            unit.animal.leave_countdown > 0
-        then
+        if not is_active_wildlife(unit) or unit.animal.leave_countdown > 0 then
             goto skip
         end
         if not check_timeout(opts, unit, week_ago_ticks) then
@@ -146,4 +155,24 @@ if positionals[1] == 'help' or opts.help then
     return
 end
 
-unstick_surface_wildlife(opts)
+if positionals[1] == 'ignore' then
+    local unit
+    local unit_id = positionals[2] and argparse.nonnegativeInt(positionals[2], 'unit_id')
+    if unit_id then
+        unit = df.unit.find(unit_id)
+    else
+        unit = dfhack.gui.getSelectedUnit(true)
+    end
+    if not unit then
+        qerror('please select a unit or pass a unit ID on the commandline')
+    end
+    if not is_active_wildlife(unit) then
+        qerror('selected unit is not blocking new waves of wildlife; nothing to do')
+    end
+    detach_unit(unit)
+    if not opts.quiet then
+        print(('%s will now be ignored by fix/wildlife'):format(dfhack.units.getReadableName(unit)))
+    end
+else
+    unstick_surface_wildlife(opts)
+end
