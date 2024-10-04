@@ -37,6 +37,7 @@ Template for new versions:
 ## Misc Improvements
 - `control-panel`: Add realistic-melting tweak to control-panel registry
 - `idle-crafting`: also support making shell crafts for workshops with linked input stockpiles
+- `gui/gm-editor`: automatic display of semantic values for language_name fields
 - `fix/stuck-worship`: reduced console output by default. Added ``--verbose`` and ``--quiet`` options.
 
 ## Removed
