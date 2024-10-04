@@ -688,7 +688,7 @@ function GmEditorUi:updateTarget(preserve_pos,reindex)
             end
         end
     end
-    self.subviews.lbl_current_item:itemById('union').text = trg.target._type._union and " [union structure]" or ""
+    self.subviews.lbl_current_item:itemById('union').text = type(trg.target) == 'userdata' and trg.target._type._union and " [union structure]" or ""
     self.subviews.lbl_current_item:itemById('name').text=tostring(trg.target)
     local t={}
     for k,v in pairs(trg.keys) do
