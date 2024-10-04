@@ -345,7 +345,7 @@ EquipOverlay.ATTRS{
     desc='Adds a link to the equip screen to fix equipment conflicts.',
     default_pos={x=7,y=21},
     default_enabled=true,
-    viewscreens='dwarfmode/SquadEquipment/Default',
+    viewscreens='dwarfmode/Squads/Equipment/Default',
     frame={w=MIN_WIDTH, h=1},
 }
 

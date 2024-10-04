@@ -330,7 +330,7 @@ ConfirmSpec{
     -- sticks out the left side so it can move with the panel
     -- when the screen is resized too narrow
     intercept_frame={r=32, t=19, w=101, b=3},
-    context='dwarfmode/SquadEquipment/Customizing/Default',
+    context='dwarfmode/Squads/Equipment/Customizing/Default',
     predicate=function(keys, mouse_offset)
         if keys._MOUSE_R then
             return uniform_has_changes()
