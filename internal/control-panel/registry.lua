@@ -93,6 +93,8 @@ COMMANDS_BY_IDX = {
         params={'--time', '1', '--timeUnits', 'days', '--command', '[', 'fix/stuck-worship', '-q', ']'}},
     {command='fix/noexert-exhaustion', group='bugfix', mode='repeat', default=true,
         params={'--time', '439', '--timeUnits', 'ticks', '--command', '[', 'fix/noexert-exhaustion', ']'}},
+    {command='fix/wildlife', group='bugfix', mode='repeat',
+        params={'--time', '2', '--timeUnits', 'days', '--command', '[', 'fix/wildlife', '-wq', ']'}},
     {command='flask-contents', help_command='tweak', group='bugfix', mode='tweak', default=true,
         desc='Displays flask contents in the item name, similar to barrels and bins.'},
     {command='named-codices', help_command='tweak', group='bugfix', mode='tweak', default=true,
