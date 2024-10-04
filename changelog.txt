@@ -41,6 +41,7 @@ Template for new versions:
 - `fix/stuck-worship`: reduced console output by default. Added ``--verbose`` and ``--quiet`` options.
 
 ## Removed
+- `modtools/force`: merged into `force`
 
 # 50.13-r5
 
