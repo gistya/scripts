@@ -100,6 +100,17 @@ local function sanitize_profession(prof)
     return prof_map[prof] or prof
 end
 
+local hostile_jobs = utils.invert{
+    df.job_type.Kidnap,
+    df.job_type.HeistItem,
+    df.job_type.AcceptHeistItem,
+}
+
+local function cancel_hostile_jobs(job)
+    if not job or not hostile_jobs[job.job_type] then return end
+    dfhack.job.removeJob(job)
+end
+
 local function fix_unit(unit)
     unit.flags1.marauder = false;
     unit.flags1.merchant = false;
@@ -151,6 +162,8 @@ local function fix_unit(unit)
     end
 
     clear_enemy_status(unit)
+
+    cancel_hostile_jobs(unit.job.current_job)
 end
 
 local function add_to_entity(hf, eid)
