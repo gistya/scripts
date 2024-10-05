@@ -83,6 +83,23 @@ function clear_enemy_status(unit)
     end
 end
 
+local prof_map = {
+    [df.profession.MERCHANT]=df.profession.TRADER,
+    [df.profession.THIEF]=df.profession.STANDARD,
+    [df.profession.MASTER_THIEF]=df.profession.STANDARD,
+    [df.profession.CRIMINAL]=df.profession.STANDARD,
+    [df.profession.DRUNK]=df.profession.STANDARD,
+    [df.profession.MONSTER_SLAYER]=df.profession.STANDARD,
+    [df.profession.SCOUT]=df.profession.STANDARD,
+    [df.profession.BEAST_HUNTER]=df.profession.STANDARD,
+    [df.profession.SNATCHER]=df.profession.STANDARD,
+    [df.profession.MERCENARY]=df.profession.STANDARD,
+}
+
+local function sanitize_profession(prof)
+    return prof_map[prof] or prof
+end
+
 local function fix_unit(unit)
     unit.flags1.marauder = false;
     unit.flags1.merchant = false;
@@ -104,8 +121,34 @@ local function fix_unit(unit)
 
     unit.civ_id = df.global.plotinfo.civ_id;
 
-    if  unit.profession == df.profession.MERCHANT then  unit.profession = df.profession.TRADER end
-    if unit.profession2 == df.profession.MERCHANT then unit.profession2 = df.profession.TRADER end
+    unit.profession = sanitize_profession(unit.profession)
+    unit.profession2 = sanitize_profession(unit.profession2)
+
+    unit.invasion_id = -1
+    unit.enemy.army_controller_id = -1
+    unit.enemy.army_controller = nil
+
+    unit.relationship_ids.GroupLeader = -1
+    for _,other in ipairs(df.global.world.units.active) do
+        if other.relationship_ids.GroupLeader == unit.id then
+            other.relationship_ids.GroupLeader = -1
+        end
+    end
+
+    -- remove unit from all current conflicts
+    unit.activities:resize(0)
+    for _,act in ipairs(df.global.world.activities.all) do
+        if act.type ~= df.activity_entry_type.Conflict then goto continue end
+        for _,ev in ipairs(act.events) do
+            if ev:getType() ~= df.activity_event_type.Conflict then goto next_ev end
+            for _,side in ipairs(ev.sides) do
+                utils.erase_sorted(side.histfig_ids, unit.hist_figure_id)
+                utils.erase_sorted(side.unit_ids, unit.id)
+            end
+            ::next_ev::
+        end
+        ::continue::
+    end
 
     clear_enemy_status(unit)
 end
@@ -228,6 +271,8 @@ local function fix_histfig(unit)
     -- add them to our civ/site if they aren't already
     if not found_civlink  then entity_link(hf, civ_id)   end
     if not found_fortlink then entity_link(hf, group_id) end
+
+    hf.profession = sanitize_profession(unit.profession)
 end
 
 ---@param unit df.unit
