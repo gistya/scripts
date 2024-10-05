@@ -94,6 +94,7 @@ TextEditor.ATTRS{
     select_pen = COLOR_CYAN,
     on_text_change = DEFAULT_NIL,
     on_cursor_change = DEFAULT_NIL,
+    one_line_mode = false,
     debug = false
 }
 
@@ -104,27 +105,28 @@ function TextEditor:init()
         TextEditorView{
             view_id='text_area',
             frame={l=0,r=3,t=0},
-            text = self.init_text,
+            text=self.init_text,
 
-            text_pen = self.text_pen,
-            ignore_keys = self.ignore_keys,
-            select_pen = self.select_pen,
-            debug = self.debug,
+            text_pen=self.text_pen,
+            ignore_keys=self.ignore_keys,
+            select_pen=self.select_pen,
+            debug=self.debug,
+            one_line_mode=self.one_line_mode,
 
-            on_text_change = function (val)
+            on_text_change=function (val)
                 self:updateLayout()
                 if self.on_text_change then
                     self.on_text_change(val)
                 end
             end,
-            on_cursor_change = self:callback('onCursorChange')
+            on_cursor_change=self:callback('onCursorChange')
         },
         widgets.Scrollbar{
             view_id='scrollbar',
             frame={r=0,t=1},
-            on_scroll=self:callback('onScrollbar')
-        },
-        widgets.HelpButton{command="gui/journal", frame={r=0,t=0}}
+            on_scroll=self:callback('onScrollbar'),
+            visible=not self.one_line_mode
+        }
     }
     self:setFocus(true)
 end
@@ -169,14 +171,14 @@ function TextEditor:setCursor(cursor_offset)
 end
 
 function TextEditor:getPreferredFocusState()
-    return true
+    return self.parent_view.focus
 end
 
 function TextEditor:postUpdateLayout()
     self:updateScrollbar(self.render_start_line_y)
 
     if self.subviews.text_area.cursor == nil then
-        local cursor = self.init_cursor or #self.text + 1
+        local cursor = self.init_cursor or #self.init_text + 1
         self.subviews.text_area:setCursor(cursor)
         self:scrollToCursor(cursor)
     end
@@ -234,6 +236,10 @@ function TextEditor:onInput(keys)
         return self.subviews.scrollbar:onInput(keys)
     end
 
+    if keys._MOUSE_L and self:getMousePos() then
+        self:setFocus(true)
+    end
+
     return TextEditor.super.onInput(self, keys)
 end
 
@@ -248,6 +254,7 @@ TextEditorView.ATTRS{
     on_cursor_change = DEFAULT_NIL,
     enable_cursor_blink = true,
     debug = false,
+    one_line_mode = false,
     history_size = 10,
 }
 
@@ -270,12 +277,22 @@ function TextEditorView:init()
         bold=true
     })
 
+    self.text = self:normalizeText(self.text)
+
     self.wrapped_text = wrapped_text.WrappedText{
         text=self.text,
         wrap_width=256
     }
 
     self.history = TextEditorHistory{history_size=self.history_size}
+end
+
+function TextEditorView:normalizeText(text)
+    if self.one_line_mode then
+        return text:gsub("\r?\n", "")
+    end
+
+    return text
 end
 
 function TextEditorView:setRenderStartLineY(render_start_line_y)
@@ -407,7 +424,7 @@ end
 
 function TextEditorView:setText(text)
     local changed = self.text ~= text
-    self.text = text
+    self.text = self:normalizeText(text)
 
     self:recomputeLines()
 
@@ -629,6 +646,8 @@ function TextEditorView:onInput(keys)
         self:paste()
         self.history:store(HISTORY_ENTRY.OTHER, self.text, self.cursor)
         return true
+    else
+        return TextEditor.super.onInput(self, keys)
     end
 end
 
@@ -742,30 +761,30 @@ function TextEditorView:onCursorInput(keys)
         self:setCursor(offset)
         self.last_cursor_x = last_cursor_x
         return true
-    elseif keys.KEYBOARD_CURSOR_UP_FAST then
+    elseif keys.CUSTOM_CTRL_HOME then
         self:setCursor(1)
         return true
-    elseif keys.KEYBOARD_CURSOR_DOWN_FAST then
+    elseif keys.CUSTOM_CTRL_END then
         -- go to text end
         self:setCursor(#self.text + 1)
         return true
-    elseif keys.CUSTOM_CTRL_B or keys.A_MOVE_W_DOWN then
+    elseif keys.CUSTOM_CTRL_LEFT then
         -- back one word
         local word_start = self:wordStartOffset()
         self:setCursor(word_start)
         return true
-    elseif keys.CUSTOM_CTRL_F or keys.A_MOVE_E_DOWN then
+    elseif keys.CUSTOM_CTRL_RIGHT then
         -- forward one word
         local word_end = self:wordEndOffset()
         self:setCursor(word_end)
         return true
-    elseif keys.CUSTOM_CTRL_H then
+    elseif keys.CUSTOM_HOME then
         -- line start
         self:setCursor(
             self:lineStartOffset()
         )
         return true
-    elseif keys.CUSTOM_CTRL_E then
+    elseif keys.CUSTOM_END then
         -- line end
         self:setCursor(
             self:lineEndOffset()
@@ -777,12 +796,14 @@ end
 function TextEditorView:onTextManipulationInput(keys)
     if keys.SELECT then
         -- handle enter
-        self.history:store(
-            HISTORY_ENTRY.WHITESPACE_BLOCK,
-            self.text,
-            self.cursor
-        )
-        self:insert(NEWLINE)
+        if not self.one_line_mode then
+            self.history:store(
+                HISTORY_ENTRY.WHITESPACE_BLOCK,
+                self.text,
+                self.cursor
+            )
+            self:insert(NEWLINE)
+        end
 
         return true
 
@@ -857,8 +878,7 @@ function TextEditorView:onTextManipulationInput(keys)
         self:eraseSelection()
 
         return true
-    elseif keys.CUSTOM_CTRL_D then
-        -- delete char, there is no support for `Delete` key
+    elseif keys.CUSTOM_DELETE then
         self.history:store(HISTORY_ENTRY.DELETE, self.text, self.cursor)
 
         if (self:hasSelection()) then

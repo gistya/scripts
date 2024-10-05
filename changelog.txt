@@ -27,32 +27,65 @@ Template for new versions:
 # Future
 
 ## New Tools
-- `embark-anyone`: allows you to embark as any civilization, including dead and non-dwarven ones
+- `fix/wildlife`: prevent wildlife from getting stuck when trying to exit the map. This fix needs to be enabled manually in `gui/control-panel` on the Bug Fixes tab since not all players want this bug to be fixed.
+
+## New Features
+- `force`: support the ``Wildlife`` event to allow additional wildlife to enter the map
+
+## Fixes
+- `gui/quickfort`: only print a help blueprint's text once even if the repeat setting is enabled
+- `makeown`: quell any active enemy relationships with the converted creature
+- `fix/loyaltycascade`: allow the fix to work on non-dwarven citizens
+- `control-panel`: fix setting numeric preferences from the commandline
+
+## Misc Improvements
+- `control-panel`: Add realistic-melting tweak to control-panel registry
+- `idle-crafting`: also support making shell crafts for workshops with linked input stockpiles
+- `gui/gm-editor`: automatic display of semantic values for language_name fields
+- `fix/stuck-worship`: reduced console output by default. Added ``--verbose`` and ``--quiet`` options.
+
+## Removed
+- `modtools/force`: merged into `force`
+
+# 50.13-r5
+
+## New Tools
+- `embark-anyone`: allows you to embark as any civilization, including dead and non-dwarven civs
 - `idle-crafting`: allow dwarves to independently satisfy their need to craft objects
 - `gui/family-affairs`: (reinstated) inspect or meddle with pregnancies, marriages, or lover relationships
+- `notes`: attach notes to locations on a fort map
 
 ## New Features
 - `caravan`: DFHack dialogs for trade screens (both ``Bring goods to depot`` and the ``Trade`` barter screen) can now filter by item origins (foreign vs. fort-made) and can filter bins by whether they have a mix of ethically acceptable and unacceptable items in them
 - `caravan`: If you have managed to select an item that is ethically unacceptable to the merchant, an "Ethics warning" badge will now appear next to the "Trade" button. Clicking on the badge will show you which items that you have selected are problematic. The dialog has a button that you can click to deselect the problematic items in the trade list.
 - `confirm`: If you have ethically unacceptable items selected for trade, the "Are you sure you want to trade" confirmation will warn you about them
 - `quickfort`: ``#zone`` blueprints now integrated with `preserve-rooms` so you can create a zone and automatically assign it to a noble or administrative role
-- `position`: option to copy cursor position to clipboard
+- `exportlegends`: option to filter by race on historical figures page
 
 ## Fixes
-- `timestream`: ensure child growth events (e.g. becoming an adult) are not skipped
+- `timestream`: ensure child growth events (that is, a child's transition to adulthood) are not skipped; existing "overage" children will be automatically fixed within a year
 - `empty-bin`: ``--liquids`` option now correctly empties containers filled with LIQUID_MISC (like lye)
 - `gui/design`: don't overcount "affected tiles" for Line & Freeform drawing tools
+- `deep-embark`: fix error when embarking where there is no land to stand on (e.g. when embarking in the ocean with `gui/embark-anywhere`)
+- `deep-embark`: fix failure to transport units and items when embarking where there is no room to spawn the starting wagon
+- `gui/create-item`, `modtools/create-item`: items of type "VERMIN", "PET", "REMANS", "FISH", "RAW FISH", and "EGG" no longer spawn creature item "nothing" and will now stack correctly
+- `rejuvenate`: don't set a lifespan limit for creatures that are immortal (e.g. elves, goblins)
+- `rejuvenate`: properly disconnect babies from mothers when aging babies up to adults
 
 ## Misc Improvements
 - `gui/sitemap`: show whether a unit is friendly, hostile, or wild
 - `gui/sitemap`: show whether a unit is caged
 - `gui/control-panel`: include option for turning off dumping of old clothes for `tailor`, for players who have magma pit dumps and want to save old clothes from being dumped into the magma
-- `position`: report current historical era (e.g., "Age of Myth")
+- `position`: report current historical era (e.g., "Age of Myth"), site/adventurer world coords, and mouse map tile coords
+- `position`: option to copy keyboard cursor position to the clipboard
+- `assign-minecarts`: reassign vehicles to routes where the vehicle has been destroyed (or has otherwise gone missing)
+- `fix/dry-buckets`: prompt DF to recheck requests for aid (e.g. "bring water" jobs) when a bucket is unclogged and becomes available for use
+- `exterminate`: show descriptive names for the listed races in addition to their IDs
+- `exterminate`: show actual names for unique creatures such as forgotten beasts and titans
+- `fix/ownership`: now also checks and fixes room ownership links
 
 ## Documentation
 - `gui/embark-anywhere`: add information about how the game determines world tile pathability and instructions for bridging two landmasses
-
-## Removed
 
 # 50.13-r4
 

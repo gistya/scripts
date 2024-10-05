@@ -43,7 +43,7 @@ Options
 ``-m``, ``--method <method>``
     Specifies the "method" of killing units. See below for details.
 ``-o``, ``--only-visible``
-    Specifies the tool should only kill units visible to the player.
+    Specifies the tool should only kill units visible to the player
     on the map.
 ``-f``, ``--include-friendly``
     Specifies the tool should also kill units friendly to the player.

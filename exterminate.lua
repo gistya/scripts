@@ -134,10 +134,23 @@ local function getMapRaces(opts)
     local map_races = {}
     for _, unit in pairs(df.global.world.units.active) do
         if not checkUnit(opts, unit) then goto continue end
-        local unit_race_name = dfhack.units.isUndead(unit) and "UNDEAD" or df.creature_raw.find(unit.race).creature_id
-        local race = ensure_key(map_races, unit_race_name)
+        local race_name, display_name
+        if dfhack.units.isUndead(unit) then
+            race_name = 'UNDEAD'
+            display_name = 'UNDEAD'
+        else
+            local craw = df.creature_raw.find(unit.race)
+            race_name = craw.creature_id
+            if race_name:match('^FORGOTTEN_BEAST_[0-9]+$') or race_name:match('^TITAN_[0-9]+$') then
+                display_name = dfhack.units.getReadableName(unit)
+            else
+                display_name = craw.name[0]
+            end
+        end
+        local race = ensure_key(map_races, race_name)
         race.id = unit.race
-        race.name = unit_race_name
+        race.name = race_name
+        race.display_name = display_name
         race.count = (race.count or 0) + 1
         ::continue::
     end
@@ -187,14 +200,31 @@ local map_races = getMapRaces(options)
 
 if not positionals[1] or positionals[1] == 'list' then
     local sorted_races = {}
-    for race, value in pairs(map_races) do
-        table.insert(sorted_races, { name = race, count = value.count })
+    local max_width = 10
+    for _,v in pairs(map_races) do
+        max_width = math.max(max_width, #v.name)
+        table.insert(sorted_races, v)
     end
     table.sort(sorted_races, function(a, b)
+        if a.count == b.count then
+            local asuffix, bsuffix = a.name:match('([0-9]+)$'), b.name:match('([0-9]+)$')
+            if asuffix and bsuffix then
+                local aname, bname = a.name:match('(.*)_[0-9]+$'), b.name:match('(.*)_[0-9]+$')
+                local anum, bnum = tonumber(asuffix), tonumber(bsuffix)
+                if aname == bname and anum and bnum then
+                    return anum < bnum
+                end
+            end
+            return a.name < b.name
+        end
         return a.count > b.count
     end)
-    for _, race in ipairs(sorted_races) do
-        print(([[%4s %s]]):format(race.count, race.name))
+    for _,v in ipairs(sorted_races) do
+        local name_str = v.name
+        if name_str ~= 'UNDEAD' and v.display_name ~= string.lower(name_str):gsub('_', ' ') then
+            name_str = ('%-'..tostring(max_width)..'s  (%s)'):format(name_str, v.display_name)
+        end
+        print(('%4s %s'):format(v.count, name_str))
     end
     return
 end

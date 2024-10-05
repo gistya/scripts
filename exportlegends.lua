@@ -2,10 +2,11 @@
 --luacheck-flags: strictsubtype
 --@ module=true
 
-local gui = require('gui')
-local overlay = require('plugins.overlay')
+local asyncexport = reqscript('internal/exportlegends/asyncexport')
+local racefilter = reqscript('internal/exportlegends/racefilter')
 local script = require('gui.script')
-local widgets = require('gui.widgets')
+
+local GLOBAL_KEY = 'exportlegends'
 
 -- Get the date of the world as a string
 -- Format: "YYYYY-MM-DD"
@@ -42,10 +43,7 @@ local function table_containskey(self, key)
     return false
 end
 
-progress_item = progress_item or ''
-num_done = num_done or -1
-num_total = num_total or -1
-last_update_ms = 0
+local last_update_ms = 0
 
 -- should be frequent enough so that user can still effectively use
 -- the vanilla legends UI to browse while export is in progress
@@ -62,12 +60,12 @@ end
 --luacheck: skip
 local function progress_ipairs(vector, desc, skip_count, interval)
     desc = desc or 'item'
-    progress_item = desc
+    asyncexport.progress_item = desc
     interval = interval or 10000
     local cb = ipairs(vector)
     return function(vector, k, ...)
         if not skip_count then
-            num_done = num_done + 1
+            asyncexport.num_done = asyncexport.num_done + 1
         end
         if k then
             if #vector >= interval and (k % interval == 0 or k == #vector - 1) then
@@ -80,7 +78,7 @@ local function progress_ipairs(vector, desc, skip_count, interval)
 end
 
 local function make_chunk(name, vector, fn)
-    num_total = num_total + #vector
+    asyncexport.num_total = asyncexport.num_total + #vector
     return {
         name=name,
         vector=vector,
@@ -1016,112 +1014,31 @@ local function export_more_legends_xml()
 end
 
 local function wrap_export()
-    if num_total >= 0 then
+    if asyncexport.num_total >= 0 then
         qerror('exportlegends already in progress')
     end
-    num_total = 0
-    num_done = 0
-    progress_item = 'basic info'
+    asyncexport.num_total = 0
+    asyncexport.num_done = 0
+    asyncexport.progress_item = 'basic info'
     yield_if_timeout()
     local ok, err = pcall(export_more_legends_xml)
     if not ok then
         dfhack.printerr(err)
     end
-    num_total = -1
-    num_done = -1
-    progress_item = ''
-end
-
--- -------------------
--- LegendsOverlay
---
-
-LegendsOverlay = defclass(LegendsOverlay, overlay.OverlayWidget)
-LegendsOverlay.ATTRS{
-    desc='Adds extended export progress bar to the legends main screen.',
-    default_pos={x=2, y=2},
-    default_enabled=true,
-    viewscreens='legends/Default',
-    frame={w=55, h=5},
-}
-
-function LegendsOverlay:init()
-    self:addviews{
-        widgets.Panel{
-            view_id='button_mask',
-            frame={t=0, l=0, w=15, h=3},
-        },
-        widgets.BannerPanel{
-            frame={b=0, l=0, r=0, h=1},
-            subviews={
-                widgets.ToggleHotkeyLabel{
-                    view_id='do_export',
-                    frame={t=0, l=1, r=1},
-                    label='Also export DFHack extended legends data:',
-                    key='CUSTOM_CTRL_D',
-                    visible=function() return num_total < 0 end,
-                },
-                widgets.Label{
-                    frame={t=0, l=1},
-                    text={
-                        'Exporting ',
-                        {width=27, text=function() return progress_item end},
-                        ' ',
-                        {text=function() return ('%.2f'):format((num_done * 100) / num_total) end, pen=COLOR_YELLOW},
-                        '% complete'
-                    },
-                    visible=function() return num_total >= 0 end,
-                },
-            },
-        },
-    }
-end
-
-function LegendsOverlay:onInput(keys)
-    if keys._MOUSE_L and num_total < 0 and
-        self.subviews.button_mask:getMousePos() and
-        self.subviews.do_export:getOptionValue()
-    then
-        script.start(wrap_export)
-    end
-    return LegendsOverlay.super.onInput(self, keys)
-end
-
--- -------------------
--- DoneMaskOverlay
---
-
-DoneMaskOverlay = defclass(DoneMaskOverlay, overlay.OverlayWidget)
-DoneMaskOverlay.ATTRS{
-    desc='Prevents legends mode from being exited while an export is in progress.',
-    default_pos={x=-2, y=2},
-    default_enabled=true,
-    viewscreens='legends',
-    frame={w=9, h=3},
-}
-
-function DoneMaskOverlay:init()
-    self:addviews{
-        widgets.Panel{
-            frame_background=gui.CLEAR_PEN,
-            visible=function() return num_total >= 0 end,
-        }
-    }
-end
-
-function DoneMaskOverlay:onInput(keys)
-    if num_total >= 0 then
-        if keys.LEAVESCREEN or (keys._MOUSE_L and self:getMousePos()) then
-            return true
-        end
-    end
-    return DoneMaskOverlay.super.onInput(self, keys)
+    asyncexport.reset_state()
 end
 
 OVERLAY_WIDGETS = {
-    export=LegendsOverlay,
-    mask=DoneMaskOverlay,
+    export=asyncexport.LegendsOverlay,
+    mask=asyncexport.DoneMaskOverlay,
+    histfigfilter=racefilter.RaceFilterOverlay,
 }
+
+dfhack.onStateChange[GLOBAL_KEY] = function(sc)
+    if sc == SC_VIEWSCREEN_CHANGED and df.viewscreen_choose_game_typest:is_instance(dfhack.gui.getDFViewscreen(true)) then
+        asyncexport.reset_state()
+    end
+end
 
 if dfhack_flags.module then
     return

@@ -59,6 +59,30 @@ local function fix_clothing_ownership(unit)
     unit.uniform.uniform_drop:resize(0)
 end
 
+function clear_enemy_status(unit)
+    if unit.enemy.enemy_status_slot <= -1 then return end
+
+    local status_cache = df.global.world.enemy_status_cache
+    local status_slot = unit.enemy.enemy_status_slot
+
+    unit.enemy.enemy_status_slot = -1
+    status_cache.slot_used[status_slot] = false
+
+    for index in ipairs(status_cache.rel_map[status_slot]) do
+        status_cache.rel_map[status_slot][index] = -1
+    end
+
+    for index in ipairs(status_cache.rel_map) do
+        status_cache.rel_map[index][status_slot] = -1
+    end
+
+    -- TODO: what if there were status slots taken above status_slot?
+    -- does everything need to be moved down by one to fill the gap?
+    if status_cache.next_slot > status_slot then
+        status_cache.next_slot = status_slot
+    end
+end
+
 local function fix_unit(unit)
     unit.flags1.marauder = false;
     unit.flags1.merchant = false;
@@ -82,6 +106,8 @@ local function fix_unit(unit)
 
     if  unit.profession == df.profession.MERCHANT then  unit.profession = df.profession.TRADER end
     if unit.profession2 == df.profession.MERCHANT then unit.profession2 = df.profession.TRADER end
+
+    clear_enemy_status(unit)
 end
 
 local function add_to_entity(hf, eid)

@@ -314,7 +314,7 @@ function Quickfort:init()
         widgets.ResizingPanel{autoarrange_subviews=true, subviews={
             widgets.Label{text='Current blueprint:'},
             widgets.WrappedLabel{
-                text_pen=COLOR_GREY,
+                text_pen=COLOR_CYAN,
                 text_to_wrap=self:callback('get_blueprint_name')}
             }},
         widgets.ResizingPanel{autoarrange_subviews=true, subviews={

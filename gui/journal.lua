@@ -123,6 +123,7 @@ function JournalWindow:init()
             on_text_change=self:callback('onTextChange'),
             on_cursor_change=self:callback('onCursorChange'),
         },
+        widgets.HelpButton{command="gui/journal", frame={r=0,t=1}},
         widgets.Panel{
             frame={l=0,r=0,b=1,h=1},
             frame_inset={l=1,r=1,t=0, w=100},
